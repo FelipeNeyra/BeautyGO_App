@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 from pathlib import Path
 import os
+from botocore.config import Config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,6 +29,40 @@ DEBUG = True
 
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver').split(',')
 
+# CONNECTION VARIABLES TO BLACKBLAZE B2 SERVICE (Respaldos)
+B2_ACCESS_KEY_ID = os.environ.get('B2_ACCESS_KEY_ID')
+B2_SECRET_ACCESS_KEY = os.environ.get('B2_SECRET_ACCESS_KEY')
+B2_BUCKET_NAME = os.environ.get('B2_BUCKET_NAME', 'respaldos-bdd-beautygo')
+B2_REGION_NAME = os.environ.get('B2_REGION_NAME', 'eu-central-003') # Ej: us-west-004 o eu-central-003
+B2_ENDPOINT_URL = f'https://s3.{B2_REGION_NAME}.backblazeb2.com'
+
+# Correo o fingerprint de la clave pública GPG usada por django-dbbackup.
+DBBACKUP_GPG_RECIPIENT = os.environ.get('DBBACKUP_GPG_RECIPIENT')
+
+# STORAGE DICT TO BLACKBLAZE BACKUP
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+    "dbbackup": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "access_key": B2_ACCESS_KEY_ID,
+            "secret_key": B2_SECRET_ACCESS_KEY,
+            "bucket_name": B2_BUCKET_NAME,
+            "region_name": B2_REGION_NAME,
+            "endpoint_url": B2_ENDPOINT_URL,
+            "default_acl": None,
+            "client_config": Config(
+                request_checksum_calculation="when_required",
+                response_checksum_validation="when_required",
+            ),
+        },
+    },
+}
 
 # Application definition
 
@@ -39,6 +74,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'website',
+    'storages',
+    'dbbackup',
 ]
 
 MIDDLEWARE = [
@@ -78,11 +115,11 @@ WSGI_APPLICATION = 'gestion_citas_rgbeauty.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'gestion_rgbeauty',
-        'USER': 'root',
-        'PASSWORD': '123456',
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'NAME': os.environ.get('DB_NAME', 'gestion_rgbeauty'),
+        'USER': os.environ.get('DB_USER', 'root'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '3306'),
     }
 }
 

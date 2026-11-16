@@ -1,2 +1,6 @@
 Django>=5.2,<6
 mysqlclient
+django-storages[s3]
+boto3
+django-dbbackup
+python-gnupg
