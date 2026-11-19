@@ -75,7 +75,7 @@ python -m pip install -r requirements.txt
    gpgconf --list-dirs homedir
    ```
 
-   En `configuracion_entorno.py`, establece `DBBACKUP_GPG_RECIPIENT` con la huella de la clave primaria destinataria otorgada por `gpg`(Corresponde a un valor hexádecimal de 40 caracteres) y `GNUPGHOME` con la ruta del llavero que devuelve `gpgconf`. La ruta de GnuPG es local a cada equipo.
+   En `configuracion_entorno.py`, establece `DBBACKUP_GPG_RECIPIENT` con la huella de la clave primaria destinataria otorgada por `gpg`(Corresponde a un valor hexádecimal de 40 caracteres) y `GNUPGHOME` con la ruta del llavero que devuelve `gpgconf --list-dirs homedir`. La ruta de GnuPG es local a cada equipo.
 
 El archivo `configuracion_entorno.py` está excluido de Git. Copias con los valores de seguridad necesarios serán compartidos directamente con los usuarios y grupos de trabajo necesarios.
 
@@ -132,5 +132,5 @@ El archivo `configuracion_entorno.py` está excluido de Git. Copias con los valo
   1. Crear un nuevo usuario desde la vista principal de la aplicación mediante el botón `CREAR CUENTA`y rellenando los campos del formulario.
   2. Acceder a las tablas creadas en el esquema local creado en MySQL y accesible desde MySQL Workbench.
   3. Seleccionar la tabla u entidad de nombre `administrador`para insertar nuevos registros.
-  4. Ejecutar un query con la siguiente estructura: `INSERT INTO administrador VALUES (1, administrador, "id de usuario creado");`, para así crear un nuevo administrador asociado con el nuevo usuario creado.
+  4. Ejecutar un query con la siguiente estructura: `INSERT INTO administrador VALUES (1, "administrador", "id de usuario creado");`, para así crear un nuevo administrador asociado con el nuevo usuario creado.
   5. Para acceder como administrador, iniciar sesión de forma normal mediante correo y contraseña.
