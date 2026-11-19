@@ -115,7 +115,7 @@ WSGI_APPLICATION = 'gestion_citas_rgbeauty.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('DB_NAME', 'gestion_rgbeauty'),
+        'NAME': os.environ.get('DB_NAME', 'gestion_rgbeauty2'),
         'USER': os.environ.get('DB_USER', 'root'),
         'PASSWORD': os.environ.get('DB_PASSWORD', ''),
         'HOST': os.environ.get('DB_HOST', 'localhost'),

@@ -266,7 +266,8 @@ class ProviderDashboardTests(TestCase):
         self.assertContains(response, 'Tu perfil fue aprobado')
         self.assertContains(response, 'Corte y brushing')
         self.assertContains(response, 'Agregar dirección de atención')
-        self.assertEqual(response.content.count(b'class="provider-role-link"'), 1)
+        self.assertContains(response, 'Ir a la página web')
+        self.assertNotContains(response, '>Prestador</a>')
 
     def test_provider_services_are_searchable_and_paginated(self):
         for service_id in range(6, 14):

@@ -251,3 +251,49 @@
 @media(max-width:850px){.provider-dashboard{margin:25px auto 50px}.provider-services-layout{grid-template-columns:1fr}.provider-section-nav>a{padding:10px;gap:8px}.provider-section-nav>a>b{display:none}.provider-subscription-banner{align-items:flex-start;flex-direction:column}.provider-subscription-action{justify-items:start;width:100%;min-width:0}.provider-subscription-action>p,.provider-subscription-action>small{text-align:left}}
 @media(max-width:650px){.provider-status-banner{align-items:flex-start;flex-direction:column;padding:23px;min-height:0}.provider-status-banner h1{font-size:34px}.provider-section-nav{grid-template-columns:1fr}.provider-section-nav>a{min-height:58px}.provider-section-nav>a>b{display:grid}.provider-panel-card{padding:15px}.provider-publish-card,.provider-content-section{padding:20px}.provider-service-list>header h2,.provider-content-heading h2{font-size:26px}.provider-reservation-card{align-items:flex-start;flex-wrap:wrap}.provider-reservation-actions{width:100%;justify-content:flex-start}.provider-site-header .main-nav,.provider-shell .main-nav{gap:6px}.provider-role-link{padding:9px 12px!important;font-size:8px!important}.provider-logout .nav-button{font-size:8px}.provider-address-link{max-width:150px;padding:9px 11px!important;font-size:10px!important}.provider-form-row{grid-template-columns:1fr}.provider-service-card{gap:9px;padding:9px}.provider-service-image{width:70px;height:70px}.provider-service-price{font-size:13px}.provider-service-copy h3{font-size:12px}.provider-subscription-banner,.provider-subscription-history{padding:21px}.provider-subscription-price strong{font-size:34px}.provider-subscription-history h2{font-size:26px}.provider-subscription-row{flex-wrap:wrap;gap:10px}.provider-subscription-period{flex-basis:100%}.provider-subscription-row-amount{margin-right:auto}.provider-subscription-badge{min-width:100px}}
 @media(max-width:520px){.provider-site-header{flex-wrap:wrap}.provider-site-header .main-nav{flex:1 1 100%;justify-content:flex-end}.provider-site-header .main-nav a:first-child,.provider-site-header .main-nav .nav-button{display:inline-flex!important}}
+
+.site-header{position:relative}
+.nav-menu-toggle{display:none}
+.nav-menu{display:flex;align-items:center;gap:22px}
+.admin-shell .nav-menu{gap:12px}
+.provider-site-header .nav-menu,.provider-shell .nav-menu{gap:14px}
+
+@media(max-width:420px){
+  .site-header{flex-wrap:nowrap;min-height:68px}
+  .nav-menu-toggle{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:4px;width:40px;height:40px;margin-left:auto;border:1px solid var(--line);
+    border-radius:50%;background:#fff
+  }
+  .nav-menu-toggle span{display:block;width:17px;height:2px;border-radius:2px;background:var(--ink)}
+  .nav-menu-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(6px) rotate(45deg)}
+  .nav-menu-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
+  .nav-menu-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+  .main-nav{gap:8px}
+  .nav-menu{
+    display:none;position:absolute;z-index:900;top:calc(100% - 4px);right:16px;
+    min-width:220px;max-width:calc(100vw - 32px);align-items:stretch;
+    flex-direction:column;gap:4px;padding:10px;border:1px solid var(--line);
+    border-radius:16px;background:#fff;box-shadow:0 16px 35px rgba(56,35,47,.16)
+  }
+  .main-nav.menu-open .nav-menu{display:flex}
+  .nav-menu>a,.nav-menu .nav-button,.nav-menu .nav-cta{
+    display:flex!important;align-items:center;justify-content:center;
+    width:100%;min-height:42px;border-radius:10px!important;padding:10px 12px!important
+  }
+  .nav-menu .inline-form{width:100%}
+  .nav-menu .inline-form .nav-button{border:0}
+  .provider-address-link{
+    display:flex!important;max-width:none!important;width:40px!important;
+    min-width:40px!important;height:40px!important;padding:0!important;
+    justify-content:center
+  }
+  .provider-address-link>span:last-child{display:none}
+  .provider-address-link>span:first-child{font-size:18px}
+  .provider-site-header .main-nav{flex:0 0 auto;width:auto!important}
+  .provider-site-header .admin-header-label{display:none}
+  .admin-header-label{display:none}
+  .admin-shell .nav-menu{gap:4px}
+  .admin-shell .main-nav{gap:8px}
+  .admin-close{display:none!important}
+}

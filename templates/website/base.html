@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'website/css/styles.css' %}?v=20261106-pagination1">
+  <link rel="stylesheet" href="{% static 'website/css/styles.css' %}?v=20261119-hamburger1">
   <style>
     .brand-monogram { width: 48px; height: 48px; object-fit: contain; }
     .brand-wordmark { width: 168px; height: auto; }
@@ -103,25 +103,31 @@
       {% elif user.is_authenticated and user.perfil_prestador and request.resolver_match.url_name == 'vista_prestador' %}
         <div class="admin-header-label"><span>Portal de prestadores</span><strong>{{ user.get_full_name|default:user.username }}</strong></div>
       {% endif %}
+      <button class="nav-menu-toggle" type="button" aria-controls="main-navigation-menu" aria-expanded="false" aria-label="Abrir menú principal">
+        <span></span><span></span><span></span>
+      </button>
       <nav class="main-nav" aria-label="Navegación principal">
-        {% if user.is_authenticated and user.perfil_administrador or user.is_superuser %}
-          <a class="dashboard-booking-link" href="{% url 'home' %}">Ir a la página web</a>
-          <form class="inline-form admin-logout" method="post" action="{% url 'logout' %}">
-            {% csrf_token %}
-            <button class="nav-button" type="submit" data-confirm-title="¿Confirmas que deseas cerrar sesión?" data-confirm-message="Tendrás que volver a ingresar para acceder a tu cuenta." data-confirm-label="Sí, cerrar sesión">Cerrar sesión</button>
-          </form>
-          <a class="admin-close" href="{% url 'home' %}" aria-label="Volver al sitio">×</a>
-        {% elif user.is_authenticated and user.perfil_prestador %}
-          <a class="provider-role-link" href="{% url 'vista_prestador' %}">Prestador</a>
-          <form class="inline-form provider-logout" method="post" action="{% url 'logout' %}">
-            {% csrf_token %}
-            <button class="nav-button" type="submit" data-confirm-title="¿Confirmas que deseas cerrar sesión?" data-confirm-message="Tendrás que volver a ingresar para acceder a tu cuenta." data-confirm-label="Sí, cerrar sesión">Cerrar sesión</button>
-          </form>
-          <a class="provider-address-link" href="{% url 'datos_usuario' %}" title="Agregar o editar dirección de atención">
-            <span aria-hidden="true">⌖</span><span>Agregar dirección de atención</span>
-          </a>
-        {% elif user.is_authenticated %}
-          <button class="nav-button quick-booking-trigger" type="button" aria-controls="quick-booking-modal" aria-expanded="false">Agendamiento rápido</button>
+        <div class="nav-menu" id="main-navigation-menu">
+          {% if user.is_authenticated and user.perfil_administrador or user.is_superuser %}
+            {% if request.resolver_match.url_name == 'vista_administrador'%}
+              <a class="dashboard-booking-link" href="{% url 'home' %}">Ir a la página web</a>
+            {% endif %}
+            <form class="inline-form admin-logout" method="post" action="{% url 'logout' %}">
+              {% csrf_token %}
+              <button class="nav-button" type="submit" data-confirm-title="¿Confirmas que deseas cerrar sesión?" data-confirm-message="Tendrás que volver a ingresar para acceder a tu cuenta." data-confirm-label="Sí, cerrar sesión">Cerrar sesión</button>
+            </form>
+          {% elif user.is_authenticated and user.perfil_prestador %}
+            {% if request.resolver_match.url_name != 'vista_prestador'%}
+              <a class="provider-role-link" href="{% url 'vista_prestador' %}">Prestador</a>
+            {% else %}
+              <a class="provider-role-link dashboard-booking-link" href="{% url 'home' %}">Ir a la página web</a>
+            {% endif %}
+            <form class="inline-form provider-logout" method="post" action="{% url 'logout' %}">
+              {% csrf_token %}
+              <button class="nav-button" type="submit" data-confirm-title="¿Confirmas que deseas cerrar sesión?" data-confirm-message="Tendrás que volver a ingresar para acceder a tu cuenta." data-confirm-label="Sí, cerrar sesión">Cerrar sesión</button>
+            </form>
+          {% elif user.is_authenticated %}
+            <button class="nav-button quick-booking-trigger" type="button" aria-controls="quick-booking-modal" aria-expanded="false">Agendamiento rápido</button>
             <a href="{% url 'reservas' %}">Mis reservas</a>
             <a href="{% url 'favoritos' %}">Favoritos</a>
             <a href="{% url 'datos_usuario' %}">Mi cuenta</a>
@@ -129,15 +135,21 @@
               {% csrf_token %}
               <button class="nav-button" type="submit" data-confirm-title="¿Confirmas que deseas cerrar sesión?" data-confirm-message="Tendrás que volver a ingresar para acceder a tu cuenta." data-confirm-label="Sí, cerrar sesión">Salir</button>
             </form>
-        {% else %}
-          <button class="nav-button quick-booking-trigger" type="button" aria-controls="quick-booking-modal" aria-expanded="false">Agendamiento rápido</button>
-          <a href="{% url 'login' %}">Ingresar</a>
-          <a class="nav-cta" href="{% url 'registro' %}">Crear cuenta</a>
-        {% endif %}
-        {% if user.is_authenticated and user.is_superuser or user.is_authenticated and user.perfil_administrador %}
-          {% if request.resolver_match.url_name != 'vista_administrador' %}
-            <a href="{% url 'vista_administrador' %}">Panel admin</a>
+          {% else %}
+            <button class="nav-button quick-booking-trigger" type="button" aria-controls="quick-booking-modal" aria-expanded="false">Agendamiento rápido</button>
+            <a href="{% url 'login' %}">Ingresar</a>
+            <a class="nav-cta" href="{% url 'registro' %}">Crear cuenta</a>
           {% endif %}
+          {% if user.is_authenticated and user.is_superuser or user.is_authenticated and user.perfil_administrador %}
+            {% if request.resolver_match.url_name != 'vista_administrador' %}
+              <a href="{% url 'vista_administrador' %}">Panel admin</a>
+            {% endif %}
+          {% endif %}
+        </div>
+        {% if user.is_authenticated and user.perfil_prestador %}
+          <a class="provider-address-link" href="{% url 'datos_usuario' %}" title="Agregar o editar dirección de atención">
+            <span aria-hidden="true">⌖</span><span>Agregar dirección de atención</span>
+          </a>
         {% endif %}
       </nav>
     </header>
@@ -193,6 +205,45 @@
       </div>
     </section>
   </div>
+  <script>
+    (() => {
+      const header = document.querySelector('.site-header');
+      const toggle = document.querySelector('.nav-menu-toggle');
+      const mainNav = document.querySelector('.main-nav');
+      const menu = document.getElementById('main-navigation-menu');
+      if (!header || !toggle || !mainNav || !menu) return;
+
+      const syncMobileMenuState = () => {
+        const isCompactViewport = window.innerWidth <= 420 && window.innerHeight <= 642;
+        toggle.style.display = isCompactViewport ? 'flex' : '';
+        if (!isCompactViewport) setMenuOpen(false);
+      };
+
+      const setMenuOpen = (isOpen) => {
+        toggle.setAttribute('aria-expanded', String(isOpen));
+        toggle.setAttribute('aria-label', isOpen ? 'Cerrar menú principal' : 'Abrir menú principal');
+        mainNav.classList.toggle('menu-open', isOpen);
+      };
+
+      toggle.addEventListener('click', () => {
+        setMenuOpen(toggle.getAttribute('aria-expanded') !== 'true');
+      });
+      document.addEventListener('click', (event) => {
+        if (!header.contains(event.target)) setMenuOpen(false);
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          setMenuOpen(false);
+          toggle.focus();
+        }
+      });
+      menu.querySelectorAll('a, button').forEach((item) => {
+        item.addEventListener('click', () => setMenuOpen(false));
+      });
+      window.addEventListener('resize', syncMobileMenuState);
+      syncMobileMenuState();
+    })();
+  </script>
   <script>
     (() => {
       const dialog = document.getElementById('action-confirmation');

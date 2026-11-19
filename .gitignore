@@ -1,3 +1,6 @@
 env/
 /configuracion_entorno.py
 /destinatario-publico.asc
+/chat.json
+/chat1.json
+/chat2.json
