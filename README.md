@@ -107,14 +107,25 @@ El archivo `configuracion_entorno.py` está excluido de Git. Copias con los valo
 
 ## Ejecutar el Proyecto
 
-1. Mediante una terminal ejecutada en la raíz del proyecto, incorporar las migraciones establecidas:
+1. Mediante una terminal ejecutada en la raíz del proyecto, crear una nuevo entrono virtual para el almacenamiento de librerías a instalar y ejecución local del proyecto:
+
+   ```cmd
+   python -m venv env
+   ```
+
+   A contnuación, instalar las librerías establecidas en el archivo `requirements.txt`
+
+   ```cmd
+   pip install -r requirements.txt
+   ```
+2. Incorporar las migraciones establecidas:
 
    ```cmd
    python manage.py migrate
    ```
 
    Debe haberse creado un esquema nuevo en la base de datos MySQL Client por medio de la terminal CLI de usuario o mediante la herramienta gráfica MySQL Workbench. El esquema debe tener el mismo nombre que el valor establecido para `DB_NAME`.
-2. Para comprobar la correcta migración de cambios y conexión efectiva con el esquema de base de datos, ejecutar el siguiente comando de arranque:
+3. Para comprobar la correcta migración de cambios y conexión efectiva con el esquema de base de datos, ejecutar el siguiente comando de arranque:
 
    ```cmd
    python manage.py runserver
