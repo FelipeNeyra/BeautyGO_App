@@ -74,6 +74,7 @@ CATEGORIES = [
 ]
 
 MONTHLY_SUBSCRIPTION_PRICE = 5000
+LIQUIDATION_COMMISSION_PERCENTAGE = 15.0
 
 # --- VISTA DE LOGIN ---
 class BeautyGoLoginView(LoginView):
@@ -100,6 +101,37 @@ def admin_required(view_func):
 
 def _format_clp(amount):
     return f'${amount:,.0f}'.replace(',', '.')
+
+
+def _create_liquidation_for_completed_reservation(reservation, administrator):
+    services = list(reservation.servicios.select_related(
+        'prestador_idprestador',
+    ))
+    if not services:
+        raise ValueError('La reserva no tiene servicios asociados.')
+
+    for service in services:
+        existing_liquidation = Liquidacion.objects.filter(
+            servicios=service,
+            servicios__reservas=reservation,
+        ).distinct().first()
+        if existing_liquidation:
+            continue
+
+        gross_amount = service.precio_base
+        commission_amount = round(
+            gross_amount * LIQUIDATION_COMMISSION_PERCENTAGE / 100
+        )
+        liquidation = Liquidacion.objects.create(
+            idliquidacion=(Liquidacion.objects.order_by('-idliquidacion')
+                           .values_list('idliquidacion', flat=True).first() or 0) + 1,
+            monto_bruto_total=gross_amount,
+            porcentaje_comision=LIQUIDATION_COMMISSION_PERCENTAGE,
+            monto_comision_spa=commission_amount,
+            monto_neto_prestador=gross_amount - commission_amount,
+            administrador_idadministrador=administrator,
+        )
+        liquidation.servicios.add(service)
 
 
 def _service_image(category, index=0):
@@ -137,6 +169,7 @@ def _filtered_services(request):
     services = [
         {
             'id': service.idservicio,
+            'provider_id': service.prestador_idprestador_id,
             'category': service.categoria or service.prestador_idprestador.especialidad.split(' y ')[0],
             'category_keys': _service_category_keys(service),
             'name': service.nombre,
@@ -198,7 +231,7 @@ def _query_range_value(value, default, minimum, maximum):
     return max(minimum, min(parsed, maximum))
 
 
-def _paginated_services(services, request, per_page=6):
+def _paginated_services(services, request, per_page=8):
     paginator = Paginator(services, per_page)
     page_obj = paginator.get_page(request.GET.get('page'))
     query_params = request.GET.copy()
@@ -239,6 +272,15 @@ def _catalog_category_keys(category):
 # Vista principal
 def home(request):
     client_profile = getattr(request.user, 'perfil_cliente', None)
+    user_prestador_id = None
+
+    if client_profile != None:
+        user_prestador_object = get_object_or_404(
+                Prestador,
+                usuario=request.user.pk
+            )
+        user_prestador_id = user_prestador_object.idprestador
+
     confirmed_booking = None
     if request.GET.get('reserva') == 'confirmada' and client_profile:
         confirmed_booking = Reserva.objects.filter(
@@ -270,6 +312,7 @@ def home(request):
     if service_rating_min > service_rating_max:
         service_rating_min, service_rating_max = service_rating_max, service_rating_min
     return render(request, 'website/home.html', {
+        'prestador_user': user_prestador_id,
         'services_page': services_page,
         'services_page_range': services_page.paginator.get_elided_page_range(
             services_page.number,
@@ -693,13 +736,83 @@ def vista_prestador(request):
                 messages.error(request, 'El estado de la reserva no es válido.')
             else:
                 reservation = get_object_or_404(
-                    Reserva,
+                    Reserva.objects.filter(
+                        servicios__prestador_idprestador=prestador,
+                    ).distinct(),
                     pk=int(reservation_id),
-                    servicios__prestador_idprestador=prestador,
                 )
-                reservation.estado = status
-                reservation.save(update_fields=['estado'])
-                messages.success(request, 'El estado de la reserva fue actualizado.')
+                if status == 'Completada':
+                    if timezone.now() <= reservation.hora_bloque:
+                        messages.error(
+                            request,
+                            'No puedes marcar esta reserva como completada antes '
+                            'de que llegue la fecha y hora programadas.',
+                        )
+                        return redirect(
+                            f"{reverse_lazy('vista_prestador')}?section=reservas"
+                        )
+                    with transaction.atomic():
+                        reservation_services = list(
+                            reservation.servicios.select_related(
+                                'prestador_idprestador',
+                            )
+                        )
+                        if not reservation_services:
+                            messages.error(
+                                request,
+                                'La reserva no tiene servicios asociados.',
+                            )
+                            return redirect(
+                                f"{reverse_lazy('vista_prestador')}?section=reservas"
+                            )
+
+                        total_amount = sum(
+                            service.precio_base
+                            for service in reservation_services
+                        )
+                        payment = Pago.objects.filter(
+                            reserva_idreserva=reservation,
+                        ).first()
+                        if payment is None:
+                            Pago.objects.create(
+                                idpago=(Pago.objects.order_by('-idpago')
+                                        .values_list('idpago', flat=True).first() or 0) + 1,
+                                monto_total=total_amount,
+                                metodo_pago='Pago total del servicio',
+                                reserva_idreserva=reservation,
+                            )
+                        else:
+                            payment.monto_total = total_amount
+                            payment.save(update_fields=['monto_total'])
+
+                        administrator = Administrador.objects.select_related(
+                            'usuario',
+                        ).order_by('pk').first()
+                        if administrator is None:
+                            messages.error(
+                                request,
+                                'No se pudo generar la liquidación: no existe '
+                                'un administrador registrado.',
+                            )
+                            return redirect(
+                                f"{reverse_lazy('vista_prestador')}?section=reservas"
+                            )
+
+                        reservation.estado = status
+                        reservation.save(update_fields=['estado'])
+                        _create_liquidation_for_completed_reservation(
+                            reservation,
+                            administrator,
+                        )
+                    messages.success(
+                        request,
+                        'La reserva fue completada, el pago total fue actualizado '
+                        'y se generaron sus liquidaciones.',
+                    )
+                else:
+                    reservation.estado = status
+                    reservation.save(update_fields=['estado'])
+                    messages.success(request, 'El estado de la reserva fue actualizado.')
             return redirect(f"{reverse_lazy('vista_prestador')}?section=reservas")
         else:
             messages.error(request, 'La acción solicitada no es válida.')
@@ -878,10 +991,11 @@ def vista_administrador(request):
         or row['subscription'].estado == SuscripcionPrestador.PENDIENTE
         for row in subscription_rows
     )
-    liquidation_count = Liquidacion.objects.count()
     liquidation_query = request.GET.get('q', '').strip()
     liquidation_provider = request.GET.get('prestador', '').strip()
-    liquidation_queryset = Liquidacion.objects.all()
+    liquidation_queryset = Liquidacion.objects.filter(
+        servicios__reservas__estado='Completada',
+    )
     if liquidation_provider.isdigit():
         liquidation_queryset = liquidation_queryset.filter(
             servicios__prestador_idprestador_id=int(liquidation_provider),
@@ -896,19 +1010,36 @@ def vista_administrador(request):
         if liquidation_query.isdigit():
             search_filter |= Q(idliquidacion=int(liquidation_query))
         liquidation_queryset = liquidation_queryset.filter(search_filter)
+    filtered_liquidation_services = (
+        _filtered_services(request)
+        if section == 'liquidaciones' else []
+    )
+    filtered_liquidation_provider_ids = {
+        item['provider_id'] for item in filtered_liquidation_services
+    }
     liquidation_providers = Prestador.objects.filter(
-    servicios__liquidaciones__isnull=False,
+        estado_aprobacion=True,
         usuario__isnull=False,
+        servicios__liquidaciones__servicios__reservas__estado='Completada',
+        pk__in=filtered_liquidation_provider_ids,
     ).select_related('usuario').distinct().order_by(
         'usuario__first_name', 'usuario__last_name', 'pk',
     )
-    liquidations = list(
-        liquidation_queryset.select_related(
-            'administrador_idadministrador__usuario',
-        ).prefetch_related(
-            'servicios__prestador_idprestador__usuario',
-        ).order_by('-idliquidacion').distinct()
-    ) if section == 'liquidaciones' else []
+    completed_liquidation_queryset = liquidation_queryset.select_related(
+        'administrador_idadministrador__usuario',
+    ).prefetch_related(
+        'servicios__prestador_idprestador__usuario',
+    ).order_by('-idliquidacion').distinct()
+    liquidation_count = completed_liquidation_queryset.count()
+    completed_liquidation_page, liquidation_querystring = _paginated_services(
+        list(completed_liquidation_queryset),
+        request,
+        per_page=10,
+    )
+    liquidations = (
+        list(completed_liquidation_page.object_list)
+        if section == 'liquidaciones' else []
+    )
     liquidation_rows = [
         {
             'liquidation': liquidation,
@@ -937,6 +1068,17 @@ def vista_administrador(request):
         'liquidation_query': liquidation_query,
         'liquidation_provider': liquidation_provider,
         'liquidation_providers': liquidation_providers,
+        'liquidation_total_commission': _format_clp(
+            sum(
+                liquidation.monto_comision_spa
+                for liquidation in completed_liquidation_queryset
+            )
+        ),
+        'liquidation_page': completed_liquidation_page,
+        'liquidation_page_range': completed_liquidation_page.paginator.get_elided_page_range(
+            completed_liquidation_page.number,
+        ),
+        'liquidation_querystring': liquidation_querystring,
     })
 
 

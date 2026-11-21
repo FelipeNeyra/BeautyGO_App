@@ -205,17 +205,22 @@
           <p>Mantiene activo tu perfil, la publicación de servicios y la recepción de nuevas reservas.</p>
         </div>
         <div class="provider-subscription-action">
-          {% if subscription and subscription.estado == 'pagada' %}
-            <span class="provider-subscription-status paid">Pago registrado</span>
-            <p>Este mes ya tienes tu suscripción al día.</p>
+          {% if prestador.estado_aprobacion %}
+            {% if subscription and subscription.estado == 'pagada' %}
+              <span class="provider-subscription-status paid">Pago registrado</span>
+              <p>Este mes ya tienes tu suscripción al día.</p>
+            {% else %}
+              <span class="provider-subscription-status pending">Pago pendiente</span>
+              <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="pagar_suscripcion">
+                <button class="provider-subscription-pay" type="submit" data-confirm-title="¿Confirmas que deseas pagar la suscripción?" data-confirm-message="Se registrará el pago simulado de {{ monthly_subscription_price }} para el periodo actual. No se realizará ningún cobro real." data-confirm-label="Sí, pagar suscripción">Pagar suscripción · {{ monthly_subscription_price }}</button>
+              </form>
+              <small>Pago simulado; no se realizará ningún cobro real.</small>
+            {% endif %}
           {% else %}
-            <span class="provider-subscription-status pending">Pago pendiente</span>
-            <form method="post">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="pagar_suscripcion">
-              <button class="provider-subscription-pay" type="submit" data-confirm-title="¿Confirmas que deseas pagar la suscripción?" data-confirm-message="Se registrará el pago simulado de {{ monthly_subscription_price }} para el periodo actual. No se realizará ningún cobro real." data-confirm-label="Sí, pagar suscripción">Pagar suscripción · {{ monthly_subscription_price }}</button>
-            </form>
-            <small>Pago simulado; no se realizará ningún cobro real.</small>
+            <span class="provider-subscription-status paid">Perfil en revisión</span>
+            <p>Tu suscripción se activara en cuanto tu perfil sea aprobado.</p>
           {% endif %}
         </div>
       </div>

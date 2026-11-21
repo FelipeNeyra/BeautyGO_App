@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from datetime import timedelta
 
 from .models import (
     Administrador,
@@ -165,6 +166,26 @@ class AdminDashboardTests(TestCase):
             servicio=service,
             liquidacion=liquidation,
         )
+        client_user = User.objects.create_user(
+            username='liquidation-client',
+            password='secure-test-password',
+        )
+        client_profile = Cliente.objects.create(
+            nombre='Cliente Liquidación',
+            correo='liquidation-client@example.com',
+            direccion_domicilio='Copiapó',
+            telefono='912345678',
+            usuario=client_user,
+        )
+        completed_reservation = Reserva.objects.create(
+            idreserva=21,
+            fecha='2026-01-10',
+            hora_bloque='2026-01-10T10:00:00Z',
+            direccion_visita='Copiapó',
+            estado='Completada',
+            cliente_idcliente=client_profile,
+        )
+        completed_reservation.servicios.add(service)
 
         response = self.client.get(
             reverse('vista_administrador') + '?section=liquidaciones'
@@ -208,6 +229,26 @@ class AdminDashboardTests(TestCase):
             servicio=other_service,
             liquidacion=other_liquidation,
         )
+        client_user = User.objects.create_user(
+            username='filtered-liquidation-client',
+            password='secure-test-password',
+        )
+        client_profile = Cliente.objects.create(
+            nombre='Cliente Filtrado',
+            correo='filtered-liquidation-client@example.com',
+            direccion_domicilio='Copiapó',
+            telefono='912345678',
+            usuario=client_user,
+        )
+        completed_reservation = Reserva.objects.create(
+            idreserva=22,
+            fecha='2026-01-11',
+            hora_bloque='2026-01-11T10:00:00Z',
+            direccion_visita='Copiapó',
+            estado='Completada',
+            cliente_idcliente=client_profile,
+        )
+        completed_reservation.servicios.add(other_service)
 
         response = self.client.get(
             reverse('vista_administrador'),
@@ -600,6 +641,72 @@ class ProviderDashboardTests(TestCase):
         self.assertEqual(response.status_code, 302)
         reservation.refresh_from_db()
         self.assertEqual(reservation.estado, 'Confirmada')
+
+    def test_provider_cannot_complete_reservation_before_scheduled_time(self):
+        reservation = Reserva.objects.create(
+            idreserva=11,
+            fecha=(timezone.localdate() + timedelta(days=1)),
+            hora_bloque=timezone.now() + timedelta(days=1),
+            direccion_visita='Copiapó',
+            estado='Confirmada',
+            cliente_idcliente=self.client_profile,
+        )
+        reservation.servicios.add(self.service)
+
+        response = self.client.post(reverse('vista_prestador'), {
+            'action': 'actualizar_reserva',
+            'reserva_id': str(reservation.pk),
+            'estado': 'Completada',
+        })
+
+        self.assertEqual(response.status_code, 302)
+        reservation.refresh_from_db()
+        self.assertEqual(reservation.estado, 'Confirmada')
+        self.assertFalse(Liquidacion.objects.exists())
+
+    def test_completed_reservation_updates_payment_and_creates_liquidation(self):
+        admin_user = User.objects.create_superuser(
+            username='liquidation-admin',
+            email='liquidation-admin@example.com',
+            password='secure-test-password',
+        )
+        administrator = Administrador.objects.create(
+            idadministrador=1,
+            usuario=admin_user,
+        )
+        reservation = Reserva.objects.create(
+            idreserva=12,
+            fecha=(timezone.localdate() - timedelta(days=1)),
+            hora_bloque=timezone.now() - timedelta(hours=1),
+            direccion_visita='Copiapó',
+            estado='Confirmada',
+            cliente_idcliente=self.client_profile,
+        )
+        reservation.servicios.add(self.service)
+        payment = Pago.objects.create(
+            idpago=12,
+            monto_total=8400,
+            metodo_pago='Abono inicial',
+            reserva_idreserva=reservation,
+        )
+
+        response = self.client.post(reverse('vista_prestador'), {
+            'action': 'actualizar_reserva',
+            'reserva_id': str(reservation.pk),
+            'estado': 'Completada',
+        })
+
+        self.assertEqual(response.status_code, 302)
+        reservation.refresh_from_db()
+        payment.refresh_from_db()
+        liquidation = Liquidacion.objects.get()
+        self.assertEqual(reservation.estado, 'Completada')
+        self.assertEqual(payment.monto_total, 28000)
+        self.assertEqual(liquidation.monto_bruto_total, 28000)
+        self.assertEqual(liquidation.monto_comision_spa, 4200)
+        self.assertEqual(liquidation.monto_neto_prestador, 23800)
+        self.assertEqual(liquidation.administrador_idadministrador, administrator)
+        self.assertTrue(liquidation.servicios.filter(pk=self.service.pk).exists())
 
     def test_unapproved_provider_cannot_publish_services(self):
         self.provider.estado_aprobacion = None

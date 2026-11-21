@@ -119,9 +119,12 @@
           {% elif user.is_authenticated and user.perfil_prestador %}
             {% if request.resolver_match.url_name != 'vista_prestador'%}
               <a class="provider-role-link" href="{% url 'vista_prestador' %}">Prestador</a>
+              <button class="nav-button quick-booking-trigger" type="button" aria-controls="quick-booking-modal" aria-expanded="false">Agendamiento rápido</button>
+              <a href="{% url 'reservas' %}">Mis reservas</a>
             {% else %}
               <a class="provider-role-link dashboard-booking-link" href="{% url 'home' %}">Ir a la página web</a>
             {% endif %}
+            <a href="{% url 'datos_usuario' %}">Mi cuenta</a>
             <form class="inline-form provider-logout" method="post" action="{% url 'logout' %}">
               {% csrf_token %}
               <button class="nav-button" type="submit" data-confirm-title="¿Confirmas que deseas cerrar sesión?" data-confirm-message="Tendrás que volver a ingresar para acceder a tu cuenta." data-confirm-label="Sí, cerrar sesión">Cerrar sesión</button>
@@ -146,11 +149,13 @@
             {% endif %}
           {% endif %}
         </div>
+        <!--
         {% if user.is_authenticated and user.perfil_prestador %}
           <a class="provider-address-link" href="{% url 'datos_usuario' %}" title="Agregar o editar dirección de atención">
             <span aria-hidden="true">⌖</span><span>Agregar dirección de atención</span>
           </a>
         {% endif %}
+        -->
       </nav>
     </header>
 

@@ -160,6 +160,7 @@
         <span class="admin-sidebar-label">Gestión financiera</span>
         <h1>Liquidaciones</h1>
         <p>Montos registrados para profesionales y comisiones de la plataforma.</p>
+        <p><strong>Montos totales:</strong> {{ liquidation_total_commission }} en comisiones</p>
       </section>
       <form class="admin-liquidation-filters" method="get" action="{% url 'vista_administrador' %}">
         <input type="hidden" name="section" value="liquidaciones">
@@ -184,28 +185,60 @@
       </form>
       <div class="admin-table-wrap">
         <table class="admin-table">
-          <thead><tr><th>N°</th><th>Servicios y profesionales</th><th>Monto bruto</th><th>Comisión</th><th>Neto profesional</th></tr></thead>
+          <thead><tr><th>N°</th><th>Profesional</th><th>Servicio</th><th>Monto bruto</th><th>Comisión</th><th>Neto comisión</th><th>Neto profesional</th></tr></thead>
           <tbody>
             {% for row in liquidation_rows %}
               <tr>
                 <td><strong>#{{ row.liquidation.idliquidacion }}</strong></td>
-                <td>
-                  {% for service in row.liquidation.servicios.all %}
-                    <strong>{{ service.nombre }}</strong><small>{{ service.prestador_idprestador.usuario.get_full_name|default:service.prestador_idprestador.usuario.username }}</small>
-                  {% empty %}
-                    <small>Sin servicios asociados</small>
-                  {% endfor %}
-                </td>
+                {% with service=row.liquidation.servicios.all|first %}
+                  {% if service %}
+                    <td><strong>{{ service.prestador_idprestador.usuario.get_full_name|default:service.prestador_idprestador.usuario.username }}</strong></td>
+                    <td><strong>{{ service.nombre }}</strong></td>
+                  {% else %}
+                    <td><small>Sin profesional asociado</small></td>
+                    <td><small>Sin servicio asociado</small></td>
+                  {% endif %}
+                {% endwith %}
                 <td>{{ row.gross_display }}</td>
-                <td>{{ row.liquidation.porcentaje_comision|floatformat:0 }}%<small>{{ row.commission_display }}</small></td>
+                <td>{{ row.liquidation.porcentaje_comision|floatformat:0 }}%</td>
+                <td><strong>{{ row.commission_display }}</strong></td>
                 <td><strong>{{ row.net_display }}</strong></td>
               </tr>
             {% empty %}
-              <tr><td class="admin-table-empty" colspan="5">Todavía no hay liquidaciones registradas.</td></tr>
+              <tr><td class="admin-table-empty" colspan="7">Todavía no hay liquidaciones registradas para reservas completadas.</td></tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
+      {% if liquidation_page.paginator.num_pages > 1 %}
+        <nav class="service-pagination" aria-label="Paginación de liquidaciones">
+          <span class="service-pagination-count">
+            Mostrando <strong>{{ liquidation_page.start_index }}–{{ liquidation_page.end_index }}</strong>
+            de {{ liquidation_page.paginator.count }} liquidaciones
+          </span>
+          <div class="service-pagination-controls">
+            {% if liquidation_page.has_previous %}
+              <a class="service-pagination-arrow" href="?{% if liquidation_querystring %}{{ liquidation_querystring }}&amp;{% endif %}page={{ liquidation_page.previous_page_number }}" aria-label="Página anterior">‹</a>
+            {% else %}
+              <span class="service-pagination-arrow disabled" aria-hidden="true">‹</span>
+            {% endif %}
+            {% for page_number in liquidation_page_range %}
+              {% if page_number == liquidation_page.paginator.ELLIPSIS %}
+                <span class="service-pagination-ellipsis" aria-hidden="true">…</span>
+              {% elif page_number == liquidation_page.number %}
+                <span class="service-pagination-page current" aria-current="page">{{ page_number }}</span>
+              {% else %}
+                <a class="service-pagination-page" href="?{% if liquidation_querystring %}{{ liquidation_querystring }}&amp;{% endif %}page={{ page_number }}" aria-label="Ir a la página {{ page_number }}">{{ page_number }}</a>
+              {% endif %}
+            {% endfor %}
+            {% if liquidation_page.has_next %}
+              <a class="service-pagination-arrow" href="?{% if liquidation_querystring %}{{ liquidation_querystring }}&amp;{% endif %}page={{ liquidation_page.next_page_number }}" aria-label="Página siguiente">›</a>
+            {% else %}
+              <span class="service-pagination-arrow disabled" aria-hidden="true">›</span>
+            {% endif %}
+          </div>
+        </nav>
+      {% endif %}
     {% endif %}
   </div>
 </section>
