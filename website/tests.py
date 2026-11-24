@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from .models import (
     Administrador,
@@ -45,6 +45,51 @@ class AdminDashboardTests(TestCase):
             estado_aprobacion=None,
             usuario=self.provider_user,
         )
+
+    def test_admin_can_filter_provider_requests_by_status(self):
+        approved_user = User.objects.create_user(
+            username='approved-request',
+            email='approved-request@example.com',
+        )
+        approved_provider = Prestador.objects.create(
+            especialidad='Uñas',
+            numCertificacion_sanitaria='CERT-APPROVED',
+            radio_cobertura='Copiapó',
+            estado_aprobacion=True,
+            usuario=approved_user,
+        )
+        rejected_user = User.objects.create_user(
+            username='rejected-request',
+            email='rejected-request@example.com',
+        )
+        rejected_provider = Prestador.objects.create(
+            especialidad='Cejas',
+            numCertificacion_sanitaria='CERT-REJECTED',
+            radio_cobertura='Copiapó',
+            estado_aprobacion=False,
+            usuario=rejected_user,
+        )
+        self.client.force_login(self.admin_user)
+
+        pending = self.client.get(
+            reverse('vista_administrador'),
+            {'section': 'solicitudes', 'estado_solicitud': 'pendientes'},
+        )
+        approved = self.client.get(
+            reverse('vista_administrador'),
+            {'section': 'solicitudes', 'estado_solicitud': 'aprobadas'},
+        )
+        rejected = self.client.get(
+            reverse('vista_administrador'),
+            {'section': 'solicitudes', 'estado_solicitud': 'rechazadas'},
+        )
+
+        self.assertEqual(pending.status_code, 200)
+        self.assertIn(self.provider, pending.context['filtered_requests'])
+        self.assertNotIn(approved_provider, pending.context['filtered_requests'])
+        self.assertNotIn(rejected_provider, pending.context['filtered_requests'])
+        self.assertIn(approved_provider, approved.context['filtered_requests'])
+        self.assertIn(rejected_provider, rejected.context['filtered_requests'])
 
     def test_admin_login_redirects_to_dashboard(self):
         response = self.client.post(reverse('login'), {
@@ -765,6 +810,207 @@ class ProviderDashboardTests(TestCase):
 
 
 class PrivilegedBookingTests(TestCase):
+    def test_booking_time_is_saved_and_read_as_local_time(self):
+        provider_user = User.objects.create_user(
+            username='timezone-provider',
+            email='timezone-provider@example.com',
+        )
+        provider = Prestador.objects.create(
+            especialidad='Faciales',
+            numCertificacion_sanitaria='CERT-TIMEZONE',
+            radio_cobertura='Copiapó',
+            estado_aprobacion=True,
+            usuario=provider_user,
+        )
+        service = Servicio.objects.create(
+            idservicio=44,
+            nombre='Horario zona horaria',
+            duracion=60,
+            precio_base=25000,
+            prestador_idprestador=provider,
+        )
+        client_user = User.objects.create_user(
+            username='timezone-client',
+            email='timezone-client@example.com',
+        )
+        Cliente.objects.create(
+            nombre='Cliente zona horaria',
+            correo=client_user.email,
+            direccion_domicilio='Copiapó',
+            telefono='912345678',
+            usuario=client_user,
+        )
+        self.client.force_login(client_user)
+
+        reservation_date = timezone.localdate() + timedelta(days=3)
+        response = self.client.post(reverse('reservas'), {
+            'service_id': str(service.pk),
+            'date': reservation_date.isoformat(),
+            'time': '11:30',
+            'contact_name': 'Cliente zona horaria',
+            'contact_email': client_user.email,
+            'contact_phone': '912345678',
+            'address': 'Copiapó',
+            'payment_status': 'success',
+        })
+
+        reservation = Reserva.objects.get(
+            cliente_idcliente__usuario=client_user,
+        )
+        local_time = timezone.localtime(
+            reservation.hora_bloque,
+            timezone.get_current_timezone(),
+        ).strftime('%H:%M')
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(reservation.fecha, reservation_date)
+        self.assertEqual(local_time, '11:30')
+
+    def test_home_exposes_occupied_slots_to_the_booking_modal(self):
+        reservation_date = timezone.localdate() + timedelta(days=2)
+        provider_user = User.objects.create_user(
+            username='occupied-display-provider',
+            email='occupied-display-provider@example.com',
+        )
+        provider = Prestador.objects.create(
+            especialidad='Faciales',
+            numCertificacion_sanitaria='CERT-DISPLAY',
+            radio_cobertura='Copiapó',
+            estado_aprobacion=True,
+            usuario=provider_user,
+        )
+        service = Servicio.objects.create(
+            idservicio=43,
+            nombre='Facial ocupado',
+            duracion=60,
+            precio_base=25000,
+            prestador_idprestador=provider,
+        )
+        client_user = User.objects.create_user(
+            username='occupied-display-client',
+            email='occupied-display-client@example.com',
+        )
+        client = Cliente.objects.create(
+            nombre='Cliente visual',
+            correo=client_user.email,
+            direccion_domicilio='Copiapó',
+            telefono='912345678',
+            usuario=client_user,
+        )
+        reservation = Reserva.objects.create(
+            idreserva=43,
+            fecha=reservation_date,
+            hora_bloque=timezone.make_aware(
+                datetime.combine(reservation_date, datetime.strptime('11:30', '%H:%M').time()),
+                timezone.get_current_timezone(),
+            ),
+            direccion_visita='Copiapó',
+            estado='Pendiente',
+            cliente_idcliente=client,
+        )
+        reservation.servicios.add(service)
+        self.client.force_login(client_user)
+
+        response = self.client.get(reverse('home'))
+
+        self.assertEqual(response.status_code, 200)
+        slot_key = f'{provider.pk}|{reservation_date.isoformat()}'
+        self.assertIn(slot_key, response.context['booking_occupied_slots'])
+        self.assertIn(
+            '11:30',
+            response.context['booking_occupied_slots'][slot_key],
+        )
+
+    def test_cannot_reserve_the_same_provider_at_the_same_time(self):
+        provider_user = User.objects.create_user(
+            username='occupied-provider',
+            email='occupied-provider@example.com',
+        )
+        provider = Prestador.objects.create(
+            especialidad='Faciales',
+            numCertificacion_sanitaria='CERT-OCCUPIED',
+            radio_cobertura='Copiapó',
+            estado_aprobacion=True,
+            usuario=provider_user,
+        )
+        first_service = Servicio.objects.create(
+            idservicio=41,
+            nombre='Limpieza facial',
+            duracion=60,
+            precio_base=25000,
+            prestador_idprestador=provider,
+        )
+        second_service = Servicio.objects.create(
+            idservicio=42,
+            nombre='Mascarilla facial',
+            duracion=30,
+            precio_base=18000,
+            prestador_idprestador=provider,
+        )
+        client_user = User.objects.create_user(
+            username='occupied-client',
+            email='occupied-client@example.com',
+            password='secure-test-password',
+        )
+        Cliente.objects.create(
+            nombre='Cliente ocupado',
+            correo=client_user.email,
+            direccion_domicilio='Copiapó',
+            telefono='912345678',
+            usuario=client_user,
+        )
+        self.client.force_login(client_user)
+
+        booking_data = {
+            'date': '2030-01-10',
+            'time': '11:30',
+            'contact_name': 'Cliente ocupado',
+            'contact_email': client_user.email,
+            'contact_phone': '912345678',
+            'address': 'Copiapó',
+            'payment_status': 'success',
+        }
+
+        first_response = self.client.post(reverse('reservas'), {
+            **booking_data,
+            'service_id': str(first_service.pk),
+        })
+        second_response = self.client.post(reverse('reservas'), {
+            **booking_data,
+            'service_id': str(second_service.pk),
+        })
+
+        self.assertEqual(first_response.status_code, 302)
+        self.assertEqual(second_response.status_code, 302)
+        self.assertEqual(
+            Reserva.objects.filter(
+                fecha='2030-01-10',
+                estado__in=['Pendiente', 'Confirmada', 'Completada'],
+                servicios__prestador_idprestador=provider,
+            ).count(),
+            1,
+        )
+        self.assertEqual(Pago.objects.count(), 1)
+
+    def test_registered_client_can_open_the_home_page_without_provider_profile(self):
+        user = User.objects.create_user(
+            username='normal-client',
+            email='normal-client@example.com',
+            password='secure-test-password',
+        )
+        Cliente.objects.create(
+            nombre='Cliente normal',
+            correo=user.email,
+            direccion_domicilio='Copiapó',
+            telefono='912345678',
+            usuario=user,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('home'))
+
+        self.assertEqual(response.status_code, 200)
+
     def test_administrator_can_open_the_catalog_to_book_a_service(self):
         admin_user = User.objects.create_user(
             username='catalog-admin',

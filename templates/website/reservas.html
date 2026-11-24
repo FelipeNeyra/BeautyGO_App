@@ -50,7 +50,7 @@
           <p class="reservation-card-provider">Con {{ item.provider }} · a domicilio</p>
           <p class="reservation-card-address">{{ item.reservation.direccion_visita }}</p>
           <div class="reservation-card-details">
-            <div><span class="reservation-card-date">▣ {{ item.reservation.fecha|date:"l, j \d\e F" }}</span><span class="reservation-card-time">◷ {{ item.reservation.hora_bloque|time:"h:i a" }}</span></div>
+            <div><span class="reservation-card-date">▣ {{ item.reservation.fecha|date:"l, j \d\e F" }}</span><span class="reservation-card-time">◷ {{ item.reservation.hora_bloque|time:"H:i" }}</span></div>
             <div class="reservation-card-price">${{ item.service.precio_base|floatformat:0 }}<small>Abono pagado: ${{ item.payment.monto_total|default:"0" }}</small></div>
           </div>
         </div>

@@ -37,6 +37,13 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from unicodedata import normalize as unicode_normalize
 
+
+def _reservation_datetime(reservation_date, reservation_time):
+    return timezone.make_aware(
+        datetime.combine(reservation_date, reservation_time),
+        timezone.get_current_timezone(),
+    )
+
 SERVICE_CATALOG = [
     {
         'category': 'Faciales', 'name': 'Facial hidratación profunda',
@@ -272,14 +279,10 @@ def _catalog_category_keys(category):
 # Vista principal
 def home(request):
     client_profile = getattr(request.user, 'perfil_cliente', None)
-    user_prestador_id = None
-
-    if client_profile != None:
-        user_prestador_object = get_object_or_404(
-                Prestador,
-                usuario=request.user.pk
-            )
-        user_prestador_id = user_prestador_object.idprestador
+    prestador_profile = getattr(request.user, 'perfil_prestador', None)
+    user_prestador_id = (
+        prestador_profile.idprestador if prestador_profile is not None else None
+    )
 
     confirmed_booking = None
     if request.GET.get('reserva') == 'confirmada' and client_profile:
@@ -311,6 +314,26 @@ def home(request):
         service_price_min, service_price_max = service_price_max, service_price_min
     if service_rating_min > service_rating_max:
         service_rating_min, service_rating_max = service_rating_max, service_rating_min
+    booking_dates = [
+        timezone.localdate() + timedelta(days=offset)
+        for offset in range(1, 8)
+    ]
+    occupied_slots = {}
+    reservations = Reserva.objects.filter(
+        fecha__in=booking_dates,
+        estado__in=['Pendiente', 'Confirmada', 'Completada'],
+    ).prefetch_related('servicios')
+    for reservation in reservations:
+        date_key = reservation.fecha.isoformat()
+        time_key = timezone.localtime(reservation.hora_bloque).strftime('%H:%M')
+        for reservation_service in reservation.servicios.all():
+            provider_key = str(
+                reservation_service.prestador_idprestador_id
+            )
+            slot_key = f'{provider_key}|{date_key}'
+            occupied_slots.setdefault(slot_key, [])
+            if time_key not in occupied_slots[slot_key]:
+                occupied_slots[slot_key].append(time_key)
     return render(request, 'website/home.html', {
         'prestador_user': user_prestador_id,
         'services_page': services_page,
@@ -335,10 +358,8 @@ def home(request):
         ).select_related('usuario').distinct().order_by(
             'usuario__first_name', 'usuario__last_name', 'pk',
         ),
-        'booking_dates': [
-            timezone.localdate() + timedelta(days=offset)
-            for offset in range(1, 8)
-        ],
+        'booking_dates': booking_dates,
+        'booking_occupied_slots': occupied_slots,
         'booking_client': client_profile,
         'confirmed_booking': confirmed_booking,
         'confirmed_payment': confirmed_payment,
@@ -420,14 +441,31 @@ def reservas(request):
                     telefono=contact_phone[:12],
                     usuario=request.user,
                 )
+            reservation_datetime = _reservation_datetime(
+                reservation_date,
+                reservation_time,
+            )
+            provider = Prestador.objects.select_for_update().get(
+                pk=service.prestador_idprestador_id,
+            )
+            occupied = Reserva.objects.filter(
+                fecha=reservation_date,
+                hora_bloque=reservation_datetime,
+                estado__in=['Pendiente', 'Confirmada', 'Completada'],
+                servicios__prestador_idprestador=provider,
+            ).exists()
+            if occupied:
+                messages.error(
+                    request,
+                    'Ese horario ya fue reservado. Selecciona otro disponible.',
+                )
+                return redirect('home')
             reservation = Reserva.objects.create(
                 idreserva=(Reserva.objects.order_by('-idreserva').values_list(
                     'idreserva', flat=True
                 ).first() or 0) + 1,
                 fecha=reservation_date,
-                hora_bloque=timezone.make_aware(
-                    datetime.combine(reservation_date, reservation_time)
-                ),
+                hora_bloque=reservation_datetime,
                 direccion_visita=address[:45],
                 estado='Pendiente',
                 cliente_idcliente=cliente,
@@ -942,14 +980,23 @@ def vista_administrador(request):
     section = request.GET.get('section', 'solicitudes')
     if section not in {'solicitudes', 'suscripciones', 'liquidaciones'}:
         section = 'solicitudes'
+    request_status = request.GET.get('estado_solicitud', 'pendientes')
+    if request_status not in {'pendientes', 'aprobadas', 'rechazadas'}:
+        request_status = 'pendientes'
+    request_status_lists = {
+        'pendientes': pending_requests,
+        'aprobadas': approved_providers,
+        'rechazadas': rejected_requests,
+    }
+    filtered_requests = request_status_lists[request_status]
 
     provider_list = list(
-        providers.prefetch_related(
+        filtered_requests.prefetch_related(
             Prefetch(
                 'servicios',
                 queryset=Servicio.objects.order_by('nombre'),
             ),
-        ).order_by('usuario__date_joined', 'pk')
+        )
     )
     selected_provider = None
     requested_provider_id = request.GET.get('prestador')
@@ -959,14 +1006,8 @@ def vista_administrador(request):
              if str(provider.pk) == requested_provider_id),
             None,
         )
-    if selected_provider is None:
-        selected_provider = next(
-            (
-                provider for provider in provider_list
-                if provider.estado_aprobacion is None
-            ),
-            provider_list[0] if provider_list else None,
-        )
+    if selected_provider is None and provider_list:
+        selected_provider = provider_list[0]
 
     current_period = timezone.localdate().replace(day=1)
     subscriptions = {
@@ -1056,6 +1097,8 @@ def vista_administrador(request):
         'approved_providers': approved_providers,
         'rejected_requests': rejected_requests,
         'selected_provider': selected_provider,
+        'request_status': request_status,
+        'filtered_requests': provider_list,
         'pending_request_count': pending_requests.count(),
         'approved_provider_count': approved_providers.count(),
         'rejected_request_count': rejected_requests.count(),

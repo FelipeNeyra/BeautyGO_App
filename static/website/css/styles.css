@@ -5,6 +5,16 @@
 @media(max-width:800px){.page-shell{padding-left:16px;padding-right:16px}.main-nav{gap:10px}.main-nav a,.nav-button{font-size:8px}.hero{min-height:400px}.hero-copy{width:100%;padding:32px 22px}.hero-image{opacity:.38;width:70%;right:-10px}.hero h1{font-size:42px}.categories{grid-template-columns:repeat(3,1fr)}.service-grid{grid-template-columns:repeat(2,1fr)}.admin-grid{grid-template-columns:1fr 1fr}.admin-header{align-items:start;gap:15px;flex-direction:column}}
 @media(max-width:520px){.booking-modal{max-height:calc(100vh - 24px);padding:18px 16px}.booking-close{right:16px}.booking-modal h2{font-size:25px}.booking-dates{gap:4px}.booking-dates button{padding:8px 2px}.brand-name{font-size:16px}.main-nav a:first-child,.nav-button{display:none}.quick-booking-trigger{display:block!important}.quick-booking-backdrop{padding:12px}.quick-booking-modal{max-height:calc(100vh - 24px);padding:18px 16px 20px}.quick-booking-close{right:16px}.quick-booking-modal h2{font-size:25px}.quick-categories{grid-template-columns:repeat(2,1fr)}.hero{min-height:410px}.hero h1{font-size:37px}.categories{gap:6px}.categories a{height:38px}.categories a span{font-size:8px}.service-grid,.admin-grid{grid-template-columns:1fr}.provider-photo{display:none}.provider-cta>div:last-child{padding:28px 24px}.form-card{padding:22px 18px}}
 .provider-cta{background:#38232f}
+
+.booking-times button.reserved,
+.booking-times button:disabled {
+ border-color:#ded9d8;
+ background:#eee9e8;
+ color:#9b9194;
+ cursor:not-allowed;
+ text-decoration:line-through;
+ opacity:.85;
+}
 .admin-shell{max-width:none;margin:0;padding:0;background:#f5f0ec}
 .admin-shell .site-header{min-height:84px;gap:22px;padding:12px 30px;border-bottom:1px solid #e8e1de;background:#fff}
 .admin-header-label{display:flex;flex:1;flex-direction:column;gap:4px;padding-left:18px;border-left:1px solid var(--line);font-size:10px}
@@ -24,6 +34,10 @@
 .admin-nav-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--lime);color:#38593c;font-size:17px}
 .admin-section-nav>a.active .admin-nav-icon{background:#ffffff32;color:#fff}
 .admin-sidebar-divider{height:1px;margin:24px 0;border:0;background:#e6dfdc}
+.admin-request-filters{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:10px 0 16px}
+.admin-request-filters a{display:flex;align-items:center;justify-content:center;gap:4px;border:1px solid #e8e1de;border-radius:20px;background:#fff;color:var(--muted);padding:8px 5px;font-size:8px;text-decoration:none}
+.admin-request-filters a.active{border-color:var(--rose);background:#fae5eb;color:var(--rose);font-weight:700}
+.admin-request-filters b{color:var(--ink)}
 .admin-sidebar-title{display:flex;align-items:center;justify-content:space-between;margin:9px 0 14px}
 .admin-sidebar-title h2{margin:0;font:500 27px "Playfair Display",serif}
 .admin-sidebar-title>span{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--lime);font-weight:700}
