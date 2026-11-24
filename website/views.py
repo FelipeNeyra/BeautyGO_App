@@ -1024,10 +1024,33 @@ def vista_administrador(request):
     )
 
     current_period = timezone.localdate().replace(day=1)
+    requested_subscription_month = request.GET.get('mes_suscripcion', '')
+    try:
+        selected_subscription_month = datetime.strptime(
+            requested_subscription_month,
+            '%Y-%m',
+        ).date().replace(day=1)
+    except ValueError:
+        selected_subscription_month = current_period
+    all_subscriptions = SuscripcionPrestador.objects.all()
+    paid_subscriptions = all_subscriptions.filter(
+        estado=SuscripcionPrestador.PAGADA,
+    )
+    paid_subscription_total = paid_subscriptions.aggregate(
+        total=Sum('monto'),
+    )['total'] or 0
+    available_subscription_months = list(
+        all_subscriptions.order_by().values_list('periodo', flat=True).distinct()
+    )
+    if current_period not in available_subscription_months:
+        available_subscription_months.insert(0, current_period)
+    monthly_subscription_total = paid_subscriptions.filter(
+        periodo=selected_subscription_month,
+    ).aggregate(total=Sum('monto'))['total'] or 0
     subscriptions = {
         subscription.prestador_id: subscription
-        for subscription in SuscripcionPrestador.objects.filter(
-            periodo=current_period,
+        for subscription in all_subscriptions.filter(
+            periodo=selected_subscription_month,
             prestador__estado_aprobacion=True,
         )
     }
@@ -1046,28 +1069,24 @@ def vista_administrador(request):
         or row['subscription'].estado == SuscripcionPrestador.PENDIENTE
         for row in subscription_rows
     )
-    paid_subscriptions = SuscripcionPrestador.objects.filter(
-        estado=SuscripcionPrestador.PAGADA,
+    subscription_payment_filter = request.GET.get(
+        'estado_pago_suscripcion',
+        'todas',
     )
-    paid_subscription_total = paid_subscriptions.aggregate(
-        total=Sum('monto'),
-    )['total'] or 0
-    available_subscription_months = list(
-        paid_subscriptions.order_by().values_list('periodo', flat=True).distinct()
-    )
-    if current_period not in available_subscription_months:
-        available_subscription_months.insert(0, current_period)
-    requested_subscription_month = request.GET.get('mes_suscripcion', '')
-    try:
-        selected_subscription_month = datetime.strptime(
-            requested_subscription_month,
-            '%Y-%m',
-        ).date().replace(day=1)
-    except ValueError:
-        selected_subscription_month = current_period
-    monthly_subscription_total = paid_subscriptions.filter(
-        periodo=selected_subscription_month,
-    ).aggregate(total=Sum('monto'))['total'] or 0
+    if subscription_payment_filter not in {'todas', 'pendientes', 'pagadas'}:
+        subscription_payment_filter = 'todas'
+    if subscription_payment_filter == 'pendientes':
+        subscription_rows = [
+            row for row in subscription_rows
+            if row['subscription'] is None
+            or row['subscription'].estado == SuscripcionPrestador.PENDIENTE
+        ]
+    elif subscription_payment_filter == 'pagadas':
+        subscription_rows = [
+            row for row in subscription_rows
+            if row['subscription']
+            and row['subscription'].estado == SuscripcionPrestador.PAGADA
+        ]
     liquidation_query = request.GET.get('q', '').strip()
     liquidation_provider = request.GET.get('prestador', '').strip()
     liquidation_queryset = Liquidacion.objects.filter(
@@ -1149,6 +1168,7 @@ def vista_administrador(request):
         'monthly_subscription_total': _format_clp(monthly_subscription_total),
         'subscription_months': available_subscription_months,
         'selected_subscription_month': selected_subscription_month,
+        'subscription_payment_filter': subscription_payment_filter,
         'current_period': current_period,
         'monthly_subscription_price': _format_clp(MONTHLY_SUBSCRIPTION_PRICE),
         'liquidation_count': liquidation_count,
@@ -1205,7 +1225,17 @@ def vista_actualizar_suscripcion(request, pk):
         pk=pk,
         estado_aprobacion=True,
     )
-    periodo = timezone.localdate().replace(day=1)
+    requested_period = request.POST.get('periodo')
+    if requested_period:
+        try:
+            periodo = datetime.strptime(requested_period, '%Y-%m').date().replace(day=1)
+        except ValueError:
+            messages.error(request, 'El período de suscripción no es válido.')
+            return redirect(
+                f"{reverse_lazy('vista_administrador')}?section=suscripciones"
+            )
+    else:
+        periodo = timezone.localdate().replace(day=1)
     subscription, _ = SuscripcionPrestador.objects.get_or_create(
         prestador=prestador,
         periodo=periodo,
@@ -1224,7 +1254,12 @@ def vista_actualizar_suscripcion(request, pk):
         'registrado_por',
     ])
 
-    messages.success(request, 'El estado de la suscripción fue actualizado.')
+    messages.success(
+        request,
+        f'El estado de la suscripción de {periodo:%m/%Y} fue actualizado.',
+    )
     return redirect(
         f"{reverse_lazy('vista_administrador')}?section=suscripciones"
+        f"&mes_suscripcion={periodo:%Y-%m}"
+        f"&estado_pago_suscripcion={request.POST.get('estado_pago_suscripcion', 'todas')}"
     )

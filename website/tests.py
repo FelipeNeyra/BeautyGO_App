@@ -270,6 +270,103 @@ class AdminDashboardTests(TestCase):
         )
         self.assertContains(response, 'Mes consultado:')
 
+    def test_subscription_table_can_filter_unpaid_providers(self):
+        self.provider.estado_aprobacion = True
+        self.provider.save(update_fields=['estado_aprobacion'])
+        paid_user = User.objects.create_user(
+            username='paid-provider',
+            email='paid-provider@example.com',
+        )
+        paid_provider = Prestador.objects.create(
+            especialidad='Uñas',
+            numCertificacion_sanitaria='CERT-PAID',
+            radio_cobertura='Copiapó',
+            estado_aprobacion=True,
+            usuario=paid_user,
+        )
+        pending_user = User.objects.create_user(
+            username='pending-provider',
+            email='pending-provider@example.com',
+        )
+        pending_provider = Prestador.objects.create(
+            especialidad='Cejas',
+            numCertificacion_sanitaria='CERT-PENDING',
+            radio_cobertura='Copiapó',
+            estado_aprobacion=True,
+            usuario=pending_user,
+        )
+        current_period = timezone.localdate().replace(day=1)
+        SuscripcionPrestador.objects.create(
+            prestador=paid_provider,
+            periodo=current_period,
+            monto=5000,
+            estado=SuscripcionPrestador.PAGADA,
+            fecha_pago=timezone.now(),
+        )
+        SuscripcionPrestador.objects.create(
+            prestador=pending_provider,
+            periodo=current_period,
+            monto=5000,
+            estado=SuscripcionPrestador.PENDIENTE,
+        )
+        self.client.force_login(self.admin_user)
+
+        response = self.client.get(
+            reverse('vista_administrador'),
+            {
+                'section': 'suscripciones',
+                'estado_pago_suscripcion': 'pendientes',
+            },
+        )
+
+        visible_providers = [
+            row['prestador'] for row in response.context['subscription_rows']
+        ]
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            set(visible_providers),
+            {self.provider, pending_provider},
+        )
+        self.assertNotIn(paid_provider, visible_providers)
+        self.assertEqual(response.context['pending_subscription_count'], 2)
+
+    def test_admin_subscription_action_updates_the_selected_month(self):
+        self.provider.estado_aprobacion = True
+        self.provider.save(update_fields=['estado_aprobacion'])
+        current_period = timezone.localdate().replace(day=1)
+        previous_period = (
+            current_period.replace(year=current_period.year - 1, month=12)
+            if current_period.month == 1
+            else current_period.replace(month=current_period.month - 1)
+        )
+        self.client.force_login(self.admin_user)
+        response = self.client.post(
+            reverse('actualizar_suscripcion', args=[self.provider.pk]),
+            {
+                'estado': SuscripcionPrestador.PAGADA,
+                'periodo': previous_period.strftime('%Y-%m'),
+                'mes_suscripcion': previous_period.strftime('%Y-%m'),
+                'estado_pago_suscripcion': 'pendientes',
+            },
+        )
+
+        subscription = SuscripcionPrestador.objects.get(
+            prestador=self.provider,
+            periodo=previous_period,
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(
+            f'mes_suscripcion={previous_period:%Y-%m}',
+            response['Location'],
+        )
+        self.assertEqual(subscription.estado, SuscripcionPrestador.PAGADA)
+        self.assertFalse(
+            SuscripcionPrestador.objects.filter(
+                prestador=self.provider,
+                periodo=current_period,
+            ).exists()
+        )
+
     def test_subscription_payment_cannot_be_changed_by_non_admin(self):
         regular_user = User.objects.create_user(
             username='regular',

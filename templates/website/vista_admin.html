@@ -68,10 +68,10 @@
       {% endif %}
     {% elif section == 'suscripciones' %}
       <div class="admin-sidebar-divider"></div>
-      <span class="admin-sidebar-label">Periodo actual</span>
+      <span class="admin-sidebar-label">Período consultado</span>
       <div class="admin-period-card">
-        <strong>{{ current_period|date:"F Y" }}</strong>
-        <span>Cuota mensual por profesional</span>
+        <strong>{{ selected_subscription_month|date:"F Y" }}</strong>
+        <span>Cuota mensual por profesional en este período</span>
         <b>{{ monthly_subscription_price }}</b>
         <small>Los pagos se registran manualmente; esta vista no realiza cobros.</small>
       </div>
@@ -170,13 +170,19 @@
       </section>
       <form class="admin-subscription-month-filter" method="get" action="{% url 'vista_administrador' %}">
         <input type="hidden" name="section" value="suscripciones">
-        <label for="subscription-month">Filtrar el total mensual</label>
+        <label for="subscription-month">Mes para totales y tabla</label>
         <select id="subscription-month" name="mes_suscripcion">
           {% for month in subscription_months %}
             <option value="{{ month|date:'Y-m' }}" {% if month == selected_subscription_month %}selected{% endif %}>{{ month|date:"F Y" }}</option>
           {% endfor %}
         </select>
-        <button type="submit" class="admin-action-button approve">Ver mes</button>
+        <label for="subscription-payment-filter">Estado de suscripción</label>
+        <select id="subscription-payment-filter" name="estado_pago_suscripcion">
+          <option value="todas" {% if subscription_payment_filter == 'todas' %}selected{% endif %}>Todas</option>
+          <option value="pendientes" {% if subscription_payment_filter == 'pendientes' %}selected{% endif %}>No pagadas</option>
+          <option value="pagadas" {% if subscription_payment_filter == 'pagadas' %}selected{% endif %}>Pagadas</option>
+        </select>
+        <button type="submit" class="admin-action-button approve">Aplicar filtros</button>
       </form>
       <section class="admin-subscription-totals" aria-label="Totales de suscripciones pagadas">
         <article><span>Total recaudado</span><strong>{{ paid_subscription_total }}</strong><small>Todas las suscripciones pagadas</small></article>
@@ -201,10 +207,13 @@
                 <td>
                   <form class="admin-subscription-form" method="post" action="{% url 'actualizar_suscripcion' row.prestador.pk %}">
                     {% csrf_token %}
+                    <input type="hidden" name="periodo" value="{{ selected_subscription_month|date:'Y-m' }}">
+                    <input type="hidden" name="mes_suscripcion" value="{{ selected_subscription_month|date:'Y-m' }}">
+                    <input type="hidden" name="estado_pago_suscripcion" value="{{ subscription_payment_filter }}">
                     {% if row.subscription and row.subscription.estado == 'pagada' %}
-                      <button class="admin-action-button reject" type="submit" name="estado" value="pendiente" data-confirm-title="¿Confirmas que deseas marcar este pago como pendiente?" data-confirm-message="Actualizarás el estado de la suscripción de {{ row.prestador.usuario.get_full_name|default:row.prestador.usuario.username }} para el periodo actual." data-confirm-label="Sí, marcar pendiente">Marcar pendiente</button>
+                      <button class="admin-action-button reject" type="submit" name="estado" value="pendiente" data-confirm-title="¿Confirmas que deseas marcar este pago como pendiente?" data-confirm-message="Actualizarás el estado de la suscripción de {{ row.prestador.usuario.get_full_name|default:row.prestador.usuario.username }} para {{ selected_subscription_month|date:'F Y' }}." data-confirm-label="Sí, marcar pendiente">Marcar pendiente</button>
                     {% else %}
-                      <button class="admin-action-button approve" type="submit" name="estado" value="pagada" data-confirm-title="¿Confirmas que deseas registrar este pago?" data-confirm-message="Registrarás como pagada la suscripción de {{ row.prestador.usuario.get_full_name|default:row.prestador.usuario.username }} por {{ row.amount_display }}." data-confirm-label="Sí, registrar pago">Registrar pago</button>
+                      <button class="admin-action-button approve" type="submit" name="estado" value="pagada" data-confirm-title="¿Confirmas que deseas registrar este pago?" data-confirm-message="Registrarás como pagada la suscripción de {{ row.prestador.usuario.get_full_name|default:row.prestador.usuario.username }} por {{ row.amount_display }} para {{ selected_subscription_month|date:'F Y' }}." data-confirm-label="Sí, registrar pago">Registrar pago</button>
                     {% endif %}
                   </form>
                 </td>

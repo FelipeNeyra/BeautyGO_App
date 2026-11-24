@@ -12,10 +12,9 @@
    - Por mes, a forma de filtro.Mostrar montos totaltes adquiridos en base a las suscripciones. ✅
 6. Filtrar suscripciones que aún no hayan sido pagadas. ✅
 
-
 7. (**Evaluar su implementación**) Implementar sistema de pago automatico de suscripciones.
-
    - Puede ser viable dada la naturaleza de pasarela de pago Webpay Plus.
+
 8. Errores gráficos de mediana a pequeña escala presentes.
 
 ##### Necesarios a realizar (Conjunto)
