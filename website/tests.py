@@ -91,6 +91,57 @@ class AdminDashboardTests(TestCase):
         self.assertIn(approved_provider, approved.context['filtered_requests'])
         self.assertIn(rejected_provider, rejected.context['filtered_requests'])
 
+    def test_request_dashboard_has_decision_metrics_and_pagination(self):
+        for index in range(8):
+            user = User.objects.create_user(
+                username=f'pending-request-{index}',
+                email=f'pending-request-{index}@example.com',
+            )
+            Prestador.objects.create(
+                especialidad='Faciales',
+                numCertificacion_sanitaria=f'CERT-PENDING-{index}',
+                radio_cobertura='Copiapó',
+                estado_aprobacion=None,
+                usuario=user,
+            )
+        approved_user = User.objects.create_user(
+            username='metrics-approved',
+            email='metrics-approved@example.com',
+        )
+        Prestador.objects.create(
+            especialidad='Uñas',
+            numCertificacion_sanitaria='CERT-METRIC-APPROVED',
+            radio_cobertura='Copiapó',
+            estado_aprobacion=True,
+            usuario=approved_user,
+        )
+        rejected_user = User.objects.create_user(
+            username='metrics-rejected',
+            email='metrics-rejected@example.com',
+        )
+        Prestador.objects.create(
+            especialidad='Cejas',
+            numCertificacion_sanitaria='CERT-METRIC-REJECTED',
+            radio_cobertura='Copiapó',
+            estado_aprobacion=False,
+            usuario=rejected_user,
+        )
+        self.client.force_login(self.admin_user)
+
+        response = self.client.get(
+            reverse('vista_administrador'),
+            {'section': 'solicitudes', 'estado_solicitud': 'pendientes'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context['filtered_requests']), 6)
+        self.assertTrue(response.context['request_page'].has_next())
+        self.assertEqual(response.context['approved_provider_count'], 1)
+        self.assertEqual(response.context['rejected_request_count'], 1)
+        self.assertEqual(response.context['decided_request_count'], 2)
+        self.assertEqual(response.context['approved_request_percentage'], 50.0)
+        self.assertEqual(response.context['rejected_request_percentage'], 50.0)
+
     def test_admin_login_redirects_to_dashboard(self):
         response = self.client.post(reverse('login'), {
             'username': 'admin@example.com',

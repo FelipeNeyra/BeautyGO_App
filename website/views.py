@@ -990,14 +990,17 @@ def vista_administrador(request):
     }
     filtered_requests = request_status_lists[request_status]
 
-    provider_list = list(
+    request_page, request_querystring = _paginated_services(
         filtered_requests.prefetch_related(
             Prefetch(
                 'servicios',
                 queryset=Servicio.objects.order_by('nombre'),
             ),
-        )
+        ),
+        request,
+        per_page=6,
     )
+    provider_list = list(request_page.object_list)
     selected_provider = None
     requested_provider_id = request.GET.get('prestador')
     if requested_provider_id:
@@ -1008,6 +1011,17 @@ def vista_administrador(request):
         )
     if selected_provider is None and provider_list:
         selected_provider = provider_list[0]
+    decided_request_count = (
+        approved_providers.count() + rejected_requests.count()
+    )
+    approved_request_percentage = (
+        round(approved_providers.count() * 100 / decided_request_count, 1)
+        if decided_request_count else 0
+    )
+    rejected_request_percentage = (
+        round(rejected_requests.count() * 100 / decided_request_count, 1)
+        if decided_request_count else 0
+    )
 
     current_period = timezone.localdate().replace(day=1)
     subscriptions = {
@@ -1099,6 +1113,11 @@ def vista_administrador(request):
         'selected_provider': selected_provider,
         'request_status': request_status,
         'filtered_requests': provider_list,
+        'request_page': request_page,
+        'request_querystring': request_querystring,
+        'approved_request_percentage': approved_request_percentage,
+        'rejected_request_percentage': rejected_request_percentage,
+        'decided_request_count': decided_request_count,
         'pending_request_count': pending_requests.count(),
         'approved_provider_count': approved_providers.count(),
         'rejected_request_count': rejected_requests.count(),

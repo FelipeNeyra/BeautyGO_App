@@ -20,22 +20,52 @@
     {% if section == 'solicitudes' %}
       <div class="admin-sidebar-divider"></div>
       <span class="admin-sidebar-label">Bandeja de entrada</span>
-      <div class="admin-sidebar-title"><h2>Solicitudes</h2><span>{{ pending_request_count }}</span></div>
+      <div class="admin-request-filters" aria-label="Filtrar solicitudes">
+        <a href="{% url 'vista_administrador' %}?section=solicitudes&estado_solicitud=pendientes" class="{% if request_status == 'pendientes' %}active{% endif %}">Pendientes <b>{{ pending_request_count }}</b></a>
+        <a href="{% url 'vista_administrador' %}?section=solicitudes&estado_solicitud=aprobadas" class="{% if request_status == 'aprobadas' %}active{% endif %}">Aprobadas <b>{{ approved_provider_count }}</b></a>
+        <a href="{% url 'vista_administrador' %}?section=solicitudes&estado_solicitud=rechazadas" class="{% if request_status == 'rechazadas' %}active{% endif %}">Rechazadas <b>{{ rejected_request_count }}</b></a>
+      </div>
+      <div class="admin-sidebar-title">
+        <h2>{% if request_status == 'pendientes' %}Pendientes{% elif request_status == 'aprobadas' %}Aprobadas{% else %}Rechazadas{% endif %}</h2>
+        {% if request_status == 'pendientes' %}<span>{{ pending_request_count }}</span>{% elif request_status == 'aprobadas' %}<span>{{ approved_provider_count }}</span>{% else %}<span>{{ rejected_request_count }}</span>{% endif %}
+      </div>
       <div class="admin-request-list">
-        {% for provider in pending_requests %}
-          <a class="admin-request-card {% if selected_provider.pk == provider.pk %}selected{% endif %}" href="{% url 'vista_administrador' %}?section=solicitudes&prestador={{ provider.pk }}">
-            <span class="admin-request-card-top"><strong>{{ provider.usuario.get_full_name|default:provider.usuario.username }}</strong><i class="status-pill pending">Pendiente</i></span>
+        {% for provider in filtered_requests %}
+          <a class="admin-request-card {% if selected_provider.pk == provider.pk %}selected{% endif %}" href="{% url 'vista_administrador' %}?section=solicitudes&estado_solicitud={{ request_status }}&prestador={{ provider.pk }}">
+            <span class="admin-request-card-top">
+              <strong>{{ provider.usuario.get_full_name|default:provider.usuario.username }}</strong>
+              {% if provider.estado_aprobacion is None %}<i class="status-pill pending">Pendiente</i>{% elif provider.estado_aprobacion %}<i class="status-pill approved">Aprobada</i>{% else %}<i class="status-pill rejected">Rechazada</i>{% endif %}
+            </span>
             <span>{{ provider.especialidad }}</span>
             <small>{{ provider.usuario.date_joined|date:"j M Y" }}</small>
           </a>
         {% empty %}
-          <p class="admin-empty-note">No hay postulaciones pendientes.</p>
+          <p class="admin-empty-note">No hay solicitudes en este estado.</p>
         {% endfor %}
       </div>
-      <div class="admin-sidebar-counts">
-        <span>Aprobadas <b>{{ approved_provider_count }}</b></span>
-        <span>Rechazadas <b>{{ rejected_request_count }}</b></span>
-      </div>
+      {% if request_page.paginator.num_pages > 1 %}
+        <nav class="admin-request-pagination" aria-label="Paginación de solicitudes">
+          {% if request_page.has_previous %}
+            <a href="?{% if request_querystring %}{{ request_querystring }}&amp;{% endif %}page={{ request_page.previous_page_number }}" aria-label="Página anterior">‹</a>
+          {% else %}
+            <span class="disabled" aria-hidden="true">‹</span>
+          {% endif %}
+          {% for page_number in request_page.paginator.get_elided_page_range %}
+            {% if page_number == request_page.paginator.ELLIPSIS %}
+              <span aria-hidden="true">…</span>
+            {% elif page_number == request_page.number %}
+              <span class="current" aria-current="page">{{ page_number }}</span>
+            {% else %}
+              <a href="?{% if request_querystring %}{{ request_querystring }}&amp;{% endif %}page={{ page_number }}">{{ page_number }}</a>
+            {% endif %}
+          {% endfor %}
+          {% if request_page.has_next %}
+            <a href="?{% if request_querystring %}{{ request_querystring }}&amp;{% endif %}page={{ request_page.next_page_number }}" aria-label="Página siguiente">›</a>
+          {% else %}
+            <span class="disabled" aria-hidden="true">›</span>
+          {% endif %}
+        </nav>
+      {% endif %}
     {% elif section == 'suscripciones' %}
       <div class="admin-sidebar-divider"></div>
       <span class="admin-sidebar-label">Periodo actual</span>
@@ -66,6 +96,23 @@
     {% endif %}
 
     {% if section == 'solicitudes' %}
+      <section class="admin-request-dashboard" aria-label="Resumen de solicitudes">
+        <article>
+          <span>Aprobadas</span>
+          <strong>{{ approved_provider_count }}</strong>
+          <small>{{ approved_request_percentage|floatformat:1 }}% del total decidido</small>
+        </article>
+        <article>
+          <span>Rechazadas</span>
+          <strong>{{ rejected_request_count }}</strong>
+          <small>{{ rejected_request_percentage|floatformat:1 }}% del total decidido</small>
+        </article>
+        <article>
+          <span>Pendientes</span>
+          <strong>{{ pending_request_count }}</strong>
+          <small>{{ decided_request_count }} solicitudes ya decididas</small>
+        </article>
+      </section>
       {% if selected_provider %}
         <section class="admin-provider-detail">
           <header class="admin-provider-heading">
