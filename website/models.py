@@ -36,6 +36,7 @@ class Cliente(models.Model):
 class Prestador(models.Model):
     idprestador = models.AutoField(db_column='idPrestador', primary_key=True)
     especialidad = models.CharField(max_length=45)
+    servicios_ofrecidos = models.JSONField(default=list, blank=True)
     numCertificacion_sanitaria = models.CharField(
         db_column='id_certificacion_sanitaria',
         max_length=45,

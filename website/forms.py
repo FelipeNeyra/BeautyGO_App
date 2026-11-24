@@ -61,9 +61,114 @@ class RegistroClienteForm(forms.ModelForm):
 
 # Formulario de Registro de Prestador
 class RegistroPrestadorForm(forms.ModelForm):
+    OTRO_SERVICIO = 'otro'
+
+    servicios_ofrecidos = forms.MultipleChoiceField(
+        choices=[
+            *[
+                category
+                for category in Servicio.CATEGORIAS
+                if category[0] != 'Otros'
+            ],
+            (OTRO_SERVICIO, 'Otro'),
+        ],
+        label='Servicios que quieres ofrecer',
+        widget=forms.CheckboxSelectMultiple(
+            attrs={'class': 'provider-service-options'},
+        ),
+    )
+    especialidad_personalizada = forms.CharField(
+        max_length=45,
+        required=False,
+        label='¿Qué otro servicio ofreces?',
+        widget=forms.TextInput(attrs={
+            'class': 'provider-form-control',
+            'placeholder': 'Escribe el servicio que ofreces',
+        }),
+    )
+    especialidad = forms.CharField(widget=forms.HiddenInput, required=False)
+
     class Meta:
         model = Prestador
-        fields = ['especialidad', 'numCertificacion_sanitaria', 'radio_cobertura']
+        fields = [
+            'servicios_ofrecidos',
+            'especialidad',
+            'numCertificacion_sanitaria',
+            'radio_cobertura',
+        ]
+
+    def __init__(self, *args, **kwargs):
+        if args and args[0] is not None:
+            data = args[0]
+            if (
+                'servicios_ofrecidos' not in data
+                and data.get('especialidad')
+            ):
+                data = data.copy()
+                data.setlist(
+                    'servicios_ofrecidos',
+                    [data.get('especialidad')],
+                )
+                args = (data, *args[1:])
+        elif kwargs.get('data') is not None:
+            data = kwargs['data']
+            if (
+                'servicios_ofrecidos' not in data
+                and data.get('especialidad')
+            ):
+                data = data.copy()
+                data.setlist(
+                    'servicios_ofrecidos',
+                    [data.get('especialidad')],
+                )
+                kwargs['data'] = data
+
+        super().__init__(*args, **kwargs)
+        if self.instance.pk and not self.is_bound:
+            self.initial['servicios_ofrecidos'] = (
+                self.instance.servicios_ofrecidos
+                or [self.instance.especialidad]
+            )
+
+        self.fields['numCertificacion_sanitaria'].label = (
+            'Certificación sanitaria'
+        )
+        self.fields['numCertificacion_sanitaria'].widget.attrs.update({
+            'class': 'provider-form-control',
+            'placeholder': 'Número de certificación',
+        })
+        self.fields['radio_cobertura'].label = 'Comuna o sector'
+        self.fields['radio_cobertura'].widget.attrs.update({
+            'class': 'provider-form-control',
+            'placeholder': 'Ej. Copiapó',
+        })
+
+    def clean(self):
+        cleaned_data = super().clean()
+        selected_services = cleaned_data.get('servicios_ofrecidos', [])
+        offered_services = [
+            service
+            for service in selected_services
+            if service != self.OTRO_SERVICIO
+        ]
+
+        if self.OTRO_SERVICIO in selected_services:
+            especialidad_personalizada = cleaned_data.get(
+                'especialidad_personalizada', ''
+            ).strip()
+            if not especialidad_personalizada:
+                self.add_error(
+                    'especialidad_personalizada',
+                    'Escribe el servicio que ofreces.',
+                )
+            else:
+                offered_services.append(especialidad_personalizada)
+
+        if offered_services:
+            cleaned_data['servicios_ofrecidos'] = offered_services
+            cleaned_data['especialidad'] = offered_services[0]
+
+        return cleaned_data
 
 
 class ServicioForm(forms.ModelForm):

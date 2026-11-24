@@ -26,4 +26,4 @@
 
 ##### Evaluar si se deben hacer
 
-1. Modificar relación entre tablas **Reserva** y **Servicio**. Resulta innecesaria una relación ManyToMany pero tampoco afecta.
+1. Mantener la relación Many-to-Many entre **Reserva** y **Servicio**: una reserva puede incluir varios servicios y el flujo actual ya utiliza ese comportamiento. ✅

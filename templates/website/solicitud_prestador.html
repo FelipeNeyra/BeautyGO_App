@@ -1,9 +1,106 @@
 {% extends 'website/base.html' %}
-{% block title %}Ofrecer servicios · Beauty Go{% endblock %}
+{% block title %}Ofrecer servicios · Beauty GO{% endblock %}
 {% block content %}
-<main class="form-page"><div class="form-card">
-  <span class="eyebrow light">Para profesionales</span><h1>Ofrece tus servicios</h1>
-  <p>Completa tus datos y nuestro equipo revisará tu solicitud.</p>
-  <form method="post" class="styled-form">{% csrf_token %}{{ prestador_form.as_p }}<button class="primary-button" type="submit">Enviar solicitud</button></form>
-</div></main>
+<style>
+  .provider-application-page { min-height: 75vh; display: grid; place-items: center; padding: 38px 18px; background: #8d8081; }
+  .provider-application-card { width: min(100%, 720px); max-height: calc(100vh - 44px); overflow-y: auto; border-radius: 26px; background: #f8f5f1; color: #38232f; box-shadow: 0 22px 55px rgba(0, 0, 0, .22); }
+  .provider-application-heading { padding: 30px 34px 22px; border-bottom: 1px solid #e9e2e1; }
+  .provider-application-eyebrow { color: #d60768; font-size: 9px; font-weight: 700; letter-spacing: 1.8px; text-transform: uppercase; }
+  .provider-application-heading h1 { margin: 8px 0 0; font: 500 31px/1.18 "Playfair Display", serif; }
+  .provider-application-content { padding: 26px 34px 32px; }
+  .provider-application-note { margin: 0 0 23px; border-radius: 16px; background: #bce6c0; color: #6b7b68; font-size: 12px; line-height: 1.55; padding: 15px 16px; }
+  .provider-application-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; }
+  .provider-application-field { display: flex; flex-direction: column; gap: 7px; }
+  .provider-application-field.full { grid-column: 1 / -1; }
+  .provider-application-field label { color: #38232f; font-size: 12px; font-weight: 700; }
+  .provider-application-field .provider-form-control { width: 100%; min-height: 48px; border: 1px solid #e9e2e1; border-radius: 12px; background: #fff; color: #38232f; padding: 0 15px; }
+  .provider-application-field .provider-form-control:focus { border-color: #d60768; outline: 2px solid #d6076833; }
+  .provider-application-field[hidden] { display: none !important; }
+  .provider-service-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; list-style: none; margin: 0; padding: 0; }
+  .provider-service-options li { min-width: 0; }
+  .provider-service-options label { display: flex; flex-direction: row; align-items: center; gap: 9px; min-height: 46px; border: 1px solid #e9e2e1; border-radius: 12px; background: #fff; padding: 10px 13px; cursor: pointer; }
+  .provider-service-options input { accent-color: #d60768; }
+  .provider-application-hint { margin: -2px 0 4px; color: #8d8081; font-size: 11px; }
+  .provider-application-field .field-error { color: #b00045; font-size: 11px; }
+  .provider-application-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 25px; padding-top: 21px; border-top: 1px solid #e9e2e1; }
+  @media (max-width: 560px) {
+    .provider-application-page { padding: 14px 10px; }
+    .provider-application-card { max-height: calc(100vh - 28px); border-radius: 20px; }
+    .provider-application-heading { padding: 24px 20px 18px; }
+    .provider-application-heading h1 { font-size: 27px; }
+    .provider-application-content { padding: 20px; }
+    .provider-application-fields { grid-template-columns: 1fr; gap: 15px; }
+    .provider-application-field.full { grid-column: auto; }
+    .provider-service-options { grid-template-columns: 1fr; }
+  }
+</style>
+<main class="provider-application-page">
+  <section class="provider-application-card" aria-labelledby="provider-application-title">
+    <header class="provider-application-heading">
+      <span class="provider-application-eyebrow">Únete a Beauty GO</span>
+      <h1 id="provider-application-title">Cuéntanos sobre tu trabajo</h1>
+    </header>
+    <div class="provider-application-content">
+      <p class="provider-application-note">Completa estos datos para que nuestro equipo pueda revisar tu perfil. Todos los campos son obligatorios.</p>
+      <form method="post" class="provider-application-form">
+        {% csrf_token %}
+        {% for error in prestador_form.non_field_errors %}
+          <p class="provider-application-field field-error">{{ error }}</p>
+        {% endfor %}
+        <div class="provider-application-fields">
+          <div class="provider-application-field full">
+          <label id="offered-services-label">{{ prestador_form.servicios_ofrecidos.label }} *</label>
+          <p class="provider-application-hint">Puedes seleccionar uno o varios servicios.</p>
+          <div role="group" aria-labelledby="offered-services-label">
+            {{ prestador_form.servicios_ofrecidos }}
+          </div>
+          {% for error in prestador_form.servicios_ofrecidos.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        </div>
+        <div class="provider-application-field full" id="custom-specialty-field" hidden>
+          <label for="{{ prestador_form.especialidad_personalizada.id_for_label }}">{{ prestador_form.especialidad_personalizada.label }} *</label>
+          {{ prestador_form.especialidad_personalizada }}
+          {% for error in prestador_form.especialidad_personalizada.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        </div>
+        {{ prestador_form.especialidad }}
+          <div class="provider-application-field">
+            <label for="{{ prestador_form.numCertificacion_sanitaria.id_for_label }}">{{ prestador_form.numCertificacion_sanitaria.label }} *</label>
+            {{ prestador_form.numCertificacion_sanitaria }}
+            {% for error in prestador_form.numCertificacion_sanitaria.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+          <div class="provider-application-field">
+            <label for="{{ prestador_form.radio_cobertura.id_for_label }}">{{ prestador_form.radio_cobertura.label }} *</label>
+            {{ prestador_form.radio_cobertura }}
+            {% for error in prestador_form.radio_cobertura.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+        </div>
+        <div class="provider-application-actions">
+          <a class="secondary-button" href="{% url 'home' %}">Cancelar</a>
+          <button class="primary-button" type="submit">Enviar solicitud</button>
+        </div>
+      </form>
+    </div>
+  </section>
+</main>
+<script>
+  (() => {
+    const serviceOptions = document.querySelectorAll(
+      'input[name="{{ prestador_form.servicios_ofrecidos.html_name }}"]',
+    );
+    const customServiceField = document.getElementById('custom-specialty-field');
+    const customServiceInput = document.getElementById('{{ prestador_form.especialidad_personalizada.id_for_label }}');
+
+    const updateCustomServiceField = () => {
+      const showCustomService = Array.from(serviceOptions).some(
+        (option) => option.checked && option.value === '{{ prestador_form.OTRO_SERVICIO }}',
+      );
+      customServiceField.hidden = !showCustomService;
+      customServiceInput.required = showCustomService;
+    };
+
+    serviceOptions.forEach((option) => {
+      option.addEventListener('change', updateCustomServiceField);
+    });
+    updateCustomServiceField();
+  })();
+</script>
 {% endblock %}

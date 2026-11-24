@@ -1004,6 +1004,109 @@ class ProviderDashboardTests(TestCase):
         self.assertEqual(provider.usuario.email, client_profile.correo)
         self.assertIsNone(provider.estado_aprobacion)
 
+    def test_provider_application_accepts_a_custom_service_category(self):
+        new_user = User.objects.create_user(
+            username='custom-service-provider',
+            email='custom-service-provider@example.com',
+            password='secure-test-password',
+        )
+        Cliente.objects.create(
+            nombre='Nuevo cliente',
+            correo=new_user.email,
+            direccion_domicilio='Copiapó',
+            telefono='912345678',
+            usuario=new_user,
+        )
+        self.client.force_login(new_user)
+
+        response = self.client.post(reverse('solicitud_prestador'), {
+            'especialidad': 'otro',
+            'especialidad_personalizada': 'Maquillaje artístico',
+            'numCertificacion_sanitaria': 'CERT-CUSTOM',
+            'radio_cobertura': 'Copiapó',
+        })
+
+        self.assertEqual(response.status_code, 302)
+        provider = Prestador.objects.get(usuario=new_user)
+        self.assertEqual(provider.especialidad, 'Maquillaje artístico')
+
+    def test_provider_application_requires_a_custom_service_when_other_is_selected(self):
+        new_user = User.objects.create_user(
+            username='missing-custom-service-provider',
+            email='missing-custom-service-provider@example.com',
+            password='secure-test-password',
+        )
+        Cliente.objects.create(
+            nombre='Nuevo cliente',
+            correo=new_user.email,
+            direccion_domicilio='Copiapó',
+            telefono='912345678',
+            usuario=new_user,
+        )
+        self.client.force_login(new_user)
+
+        response = self.client.post(reverse('solicitud_prestador'), {
+            'especialidad': 'otro',
+            'especialidad_personalizada': '',
+            'numCertificacion_sanitaria': 'CERT-MISSING',
+            'radio_cobertura': 'Copiapó',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Prestador.objects.filter(usuario=new_user).exists())
+        self.assertContains(response, 'Escribe el servicio que ofreces.')
+
+    def test_provider_application_can_offer_multiple_services(self):
+        new_user = User.objects.create_user(
+            username='multiple-service-provider',
+            email='multiple-service-provider@example.com',
+            password='secure-test-password',
+        )
+        Cliente.objects.create(
+            nombre='Nuevo cliente',
+            correo=new_user.email,
+            direccion_domicilio='Copiapó',
+            telefono='912345678',
+            usuario=new_user,
+        )
+        self.client.force_login(new_user)
+
+        response = self.client.post(reverse('solicitud_prestador'), {
+            'servicios_ofrecidos': ['Peluquería', 'Uñas', 'otro'],
+            'especialidad_personalizada': 'Maquillaje artístico',
+            'numCertificacion_sanitaria': 'CERT-MULTIPLE',
+            'radio_cobertura': 'Copiapó',
+        })
+
+        self.assertEqual(response.status_code, 302)
+        provider = Prestador.objects.get(usuario=new_user)
+        self.assertEqual(
+            provider.servicios_ofrecidos,
+            ['Peluquería', 'Uñas', 'Maquillaje artístico'],
+        )
+        self.assertEqual(provider.especialidad, 'Peluquería')
+
+    def test_provider_application_hides_custom_service_field_initially(self):
+        new_user = User.objects.create_user(
+            username='application-form-client',
+            email='application-form-client@example.com',
+            password='secure-test-password',
+        )
+        Cliente.objects.create(
+            nombre='Nuevo cliente',
+            correo=new_user.email,
+            direccion_domicilio='Copiapó',
+            telefono='912345678',
+            usuario=new_user,
+        )
+        self.client.force_login(new_user)
+
+        response = self.client.get(reverse('solicitud_prestador'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="custom-specialty-field" hidden')
+        self.assertContains(response, 'Puedes seleccionar uno o varios servicios.')
+
 
 class PrivilegedBookingTests(TestCase):
     def test_booking_time_is_saved_and_read_as_local_time(self):
