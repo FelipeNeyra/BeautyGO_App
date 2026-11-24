@@ -222,6 +222,54 @@ class AdminDashboardTests(TestCase):
         self.assertEqual(subscription.estado, SuscripcionPrestador.PENDIENTE)
         self.assertIsNone(subscription.fecha_pago)
 
+    def test_subscription_dashboard_totals_only_paid_amounts_by_selected_month(self):
+        self.provider.estado_aprobacion = True
+        self.provider.save(update_fields=['estado_aprobacion'])
+        selected_month = timezone.localdate().replace(day=1)
+        previous_month = (
+            selected_month.replace(year=selected_month.year - 1, month=12)
+            if selected_month.month == 1
+            else selected_month.replace(month=selected_month.month - 1)
+        )
+        SuscripcionPrestador.objects.create(
+            prestador=self.provider,
+            periodo=selected_month,
+            monto=7000,
+            estado=SuscripcionPrestador.PAGADA,
+            fecha_pago=timezone.now(),
+        )
+        SuscripcionPrestador.objects.create(
+            prestador=self.provider,
+            periodo=previous_month,
+            monto=6000,
+            estado=SuscripcionPrestador.PAGADA,
+            fecha_pago=timezone.now(),
+        )
+        SuscripcionPrestador.objects.create(
+            prestador=self.provider,
+            periodo=selected_month.replace(year=selected_month.year - 1),
+            monto=9000,
+            estado=SuscripcionPrestador.PENDIENTE,
+        )
+        self.client.force_login(self.admin_user)
+
+        response = self.client.get(
+            reverse('vista_administrador'),
+            {
+                'section': 'suscripciones',
+                'mes_suscripcion': previous_month.strftime('%Y-%m'),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['paid_subscription_total'], '$13.000')
+        self.assertEqual(response.context['monthly_subscription_total'], '$6.000')
+        self.assertEqual(
+            response.context['selected_subscription_month'],
+            previous_month,
+        )
+        self.assertContains(response, 'Mes consultado:')
+
     def test_subscription_payment_cannot_be_changed_by_non_admin(self):
         regular_user = User.objects.create_user(
             username='regular',

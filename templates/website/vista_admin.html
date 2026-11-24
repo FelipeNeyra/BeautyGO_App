@@ -166,7 +166,21 @@
       <section class="admin-section-heading">
         <span class="admin-sidebar-label">Gestión de suscripciones</span>
         <h1>Pagos mensuales</h1>
-        <p>Periodo: {{ current_period|date:"F Y" }} · Valor mensual: <strong>{{ monthly_subscription_price }} CLP</strong></p>
+        <p>Mes consultado: {{ selected_subscription_month|date:"F Y" }} · Valor mensual: <strong>{{ monthly_subscription_price }} CLP</strong></p>
+      </section>
+      <form class="admin-subscription-month-filter" method="get" action="{% url 'vista_administrador' %}">
+        <input type="hidden" name="section" value="suscripciones">
+        <label for="subscription-month">Filtrar el total mensual</label>
+        <select id="subscription-month" name="mes_suscripcion">
+          {% for month in subscription_months %}
+            <option value="{{ month|date:'Y-m' }}" {% if month == selected_subscription_month %}selected{% endif %}>{{ month|date:"F Y" }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="admin-action-button approve">Ver mes</button>
+      </form>
+      <section class="admin-subscription-totals" aria-label="Totales de suscripciones pagadas">
+        <article><span>Total recaudado</span><strong>{{ paid_subscription_total }}</strong><small>Todas las suscripciones pagadas</small></article>
+        <article><span>Total de {{ selected_subscription_month|date:"F Y" }}</span><strong>{{ monthly_subscription_total }}</strong><small>Solo pagos del mes seleccionado</small></article>
       </section>
       <div class="admin-table-wrap">
         <table class="admin-table">

@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.db.models import Prefetch
 from .forms import (
     EditarUsuarioForm,
@@ -1046,6 +1046,28 @@ def vista_administrador(request):
         or row['subscription'].estado == SuscripcionPrestador.PENDIENTE
         for row in subscription_rows
     )
+    paid_subscriptions = SuscripcionPrestador.objects.filter(
+        estado=SuscripcionPrestador.PAGADA,
+    )
+    paid_subscription_total = paid_subscriptions.aggregate(
+        total=Sum('monto'),
+    )['total'] or 0
+    available_subscription_months = list(
+        paid_subscriptions.order_by().values_list('periodo', flat=True).distinct()
+    )
+    if current_period not in available_subscription_months:
+        available_subscription_months.insert(0, current_period)
+    requested_subscription_month = request.GET.get('mes_suscripcion', '')
+    try:
+        selected_subscription_month = datetime.strptime(
+            requested_subscription_month,
+            '%Y-%m',
+        ).date().replace(day=1)
+    except ValueError:
+        selected_subscription_month = current_period
+    monthly_subscription_total = paid_subscriptions.filter(
+        periodo=selected_subscription_month,
+    ).aggregate(total=Sum('monto'))['total'] or 0
     liquidation_query = request.GET.get('q', '').strip()
     liquidation_provider = request.GET.get('prestador', '').strip()
     liquidation_queryset = Liquidacion.objects.filter(
@@ -1123,6 +1145,10 @@ def vista_administrador(request):
         'rejected_request_count': rejected_requests.count(),
         'subscription_rows': subscription_rows,
         'pending_subscription_count': pending_subscriptions,
+        'paid_subscription_total': _format_clp(paid_subscription_total),
+        'monthly_subscription_total': _format_clp(monthly_subscription_total),
+        'subscription_months': available_subscription_months,
+        'selected_subscription_month': selected_subscription_month,
         'current_period': current_period,
         'monthly_subscription_price': _format_clp(MONTHLY_SUBSCRIPTION_PRICE),
         'liquidation_count': liquidation_count,
