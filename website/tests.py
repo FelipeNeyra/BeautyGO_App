@@ -1062,7 +1062,7 @@ class PrivilegedBookingTests(TestCase):
         self.assertEqual(reservation.fecha, reservation_date)
         self.assertEqual(local_time, '11:30')
 
-    def test_home_exposes_occupied_slots_to_the_booking_modal(self):
+    def test_home_exposes_reservation_intervals_to_the_booking_modal(self):
         reservation_date = timezone.localdate() + timedelta(days=2)
         provider_user = User.objects.create_user(
             username='occupied-display-provider',
@@ -1110,12 +1110,89 @@ class PrivilegedBookingTests(TestCase):
         response = self.client.get(reverse('home'))
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-service-duration="60"')
         slot_key = f'{provider.pk}|{reservation_date.isoformat()}'
-        self.assertIn(slot_key, response.context['booking_occupied_slots'])
+        self.assertIn(slot_key, response.context['booking_occupied_intervals'])
         self.assertIn(
-            '11:30',
-            response.context['booking_occupied_slots'][slot_key],
+            {'start': 690, 'end': 750},
+            response.context['booking_occupied_intervals'][slot_key],
         )
+
+    def test_reservation_duration_blocks_overlapping_start_times(self):
+        provider_user = User.objects.create_user(
+            username='overlap-provider',
+            email='overlap-provider@example.com',
+        )
+        provider = Prestador.objects.create(
+            especialidad='Faciales',
+            numCertificacion_sanitaria='CERT-OVERLAP',
+            radio_cobertura='Copiapó',
+            estado_aprobacion=True,
+            usuario=provider_user,
+        )
+        hour_service = Servicio.objects.create(
+            idservicio=45,
+            nombre='Servicio de una hora',
+            duracion=60,
+            precio_base=25000,
+            prestador_idprestador=provider,
+        )
+        half_hour_service = Servicio.objects.create(
+            idservicio=46,
+            nombre='Servicio de media hora',
+            duracion=30,
+            precio_base=18000,
+            prestador_idprestador=provider,
+        )
+        client_user = User.objects.create_user(
+            username='overlap-client',
+            email='overlap-client@example.com',
+            password='secure-test-password',
+        )
+        Cliente.objects.create(
+            nombre='Cliente de prueba',
+            correo=client_user.email,
+            direccion_domicilio='Copiapó',
+            telefono='912345678',
+            usuario=client_user,
+        )
+        self.client.force_login(client_user)
+        booking_data = {
+            'date': '2030-01-10',
+            'contact_name': 'Cliente de prueba',
+            'contact_email': client_user.email,
+            'contact_phone': '912345678',
+            'address': 'Copiapó',
+            'payment_status': 'success',
+        }
+
+        first_response = self.client.post(reverse('reservas'), {
+            **booking_data,
+            'service_id': str(hour_service.pk),
+            'time': '18:00',
+        })
+        overlapping_response = self.client.post(reverse('reservas'), {
+            **booking_data,
+            'service_id': str(half_hour_service.pk),
+            'time': '18:30',
+        })
+        adjacent_response = self.client.post(reverse('reservas'), {
+            **booking_data,
+            'service_id': str(half_hour_service.pk),
+            'time': '19:00',
+        })
+
+        self.assertEqual(first_response.status_code, 302)
+        self.assertEqual(overlapping_response.status_code, 302)
+        self.assertEqual(adjacent_response.status_code, 302)
+        self.assertEqual(
+            Reserva.objects.filter(
+                fecha='2030-01-10',
+                servicios__prestador_idprestador=provider,
+            ).count(),
+            2,
+        )
+        self.assertEqual(Pago.objects.count(), 2)
 
     def test_cannot_reserve_the_same_provider_at_the_same_time(self):
         provider_user = User.objects.create_user(

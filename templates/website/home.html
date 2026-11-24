@@ -90,7 +90,7 @@
           <div class="card-bottom"><span>Desde <strong>{{ service.price }}</strong></span>{% if service.id %}<a href="{% url 'detalle_servicio' service.id %}">Ver detalles</a>
             {% if user.is_authenticated %}
               {% if prestador_user != service.provider_id %}
-                <button class="booking-trigger" type="button" data-service-id="{{ service.id }}" data-provider-id="{{ service.provider_id }}" data-service-name="{{ service.name }}" data-service-provider="{{ service.provider }}" data-service-price="{{ service.price }}" data-service-image="{{ service.image }}">Reservar</button>
+                <button class="booking-trigger" type="button" data-service-id="{{ service.id }}" data-provider-id="{{ service.provider_id }}" data-service-duration="{{ service.duration_minutes }}" data-service-name="{{ service.name }}" data-service-provider="{{ service.provider }}" data-service-price="{{ service.price }}" data-service-image="{{ service.image }}">Reservar</button>
               {% endif %}
             {% else %}<a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}">Inicia sesión</a>{% endif %}{% else %}<span class="service-unavailable">Próximamente</span>{% endif %}</div>
         </div>
@@ -161,7 +161,7 @@
 </script>
 
 {% if user.is_authenticated %}
-{{ booking_occupied_slots|json_script:"booking-occupied-data" }}
+{{ booking_occupied_intervals|json_script:"booking-occupied-data" }}
 <div class="booking-backdrop" id="booking-modal" hidden>
   <section class="booking-modal" role="dialog" aria-modal="true" aria-labelledby="booking-title">
     <button class="booking-close" type="button" aria-label="Cerrar reserva">×</button>
@@ -240,13 +240,19 @@
     const progress = modal.querySelectorAll('.booking-progress i');
     let currentStep = 0;
     let selectedProviderId = null;
+    let selectedServiceDuration = 0;
     const updateOccupiedTimes = () => {
       const selectedDate = modal.querySelector('#booking-date').value;
       const occupied = selectedProviderId && selectedDate
         ? (occupiedSlots[`${selectedProviderId}|${selectedDate}`] || [])
         : [];
       timeButtons.forEach((button) => {
-        const isOccupied = occupied.includes(button.dataset.time);
+        const [hour, minute] = button.dataset.time.split(':').map(Number);
+        const candidateStart = hour * 60 + minute;
+        const candidateEnd = candidateStart + selectedServiceDuration;
+        const isOccupied = occupied.some((interval) =>
+          candidateStart < interval.end && interval.start < candidateEnd,
+        );
         button.disabled = isOccupied;
         button.classList.toggle('reserved', isOccupied);
         button.textContent = isOccupied ? `${button.dataset.time} · Reservado` : button.dataset.time;
@@ -285,6 +291,7 @@
         modal.querySelector('.booking-service-image').src = trigger.dataset.serviceImage;
         modal.querySelector('#booking-service-id').value = trigger.dataset.serviceId;
         selectedProviderId = trigger.dataset.providerId;
+        selectedServiceDuration = Number(trigger.dataset.serviceDuration);
         modal.querySelector('.booking-summary-name').textContent = trigger.dataset.serviceName;
         const deposit = trigger.dataset.servicePrice.replace('$', '').replace('.', '');
         modal.querySelectorAll('.booking-deposit-value').forEach((item) => {

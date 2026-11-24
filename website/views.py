@@ -184,6 +184,7 @@ def _filtered_services(request):
             'provider': service.prestador_idprestador.usuario.get_full_name()
             or service.prestador_idprestador.usuario.username,
             'duration': f'{service.duracion} min',
+            'duration_minutes': service.duracion,
             'price': f'${service.precio_base:,.0f}'.replace(',', '.'),
             'price_value': service.precio_base,
             'time': 'Disponible hoy',
@@ -318,22 +319,29 @@ def home(request):
         timezone.localdate() + timedelta(days=offset)
         for offset in range(1, 8)
     ]
-    occupied_slots = {}
+    occupied_intervals = {}
     reservations = Reserva.objects.filter(
         fecha__in=booking_dates,
         estado__in=['Pendiente', 'Confirmada', 'Completada'],
     ).prefetch_related('servicios')
     for reservation in reservations:
         date_key = reservation.fecha.isoformat()
-        time_key = timezone.localtime(reservation.hora_bloque).strftime('%H:%M')
+        local_start = timezone.localtime(
+            reservation.hora_bloque,
+            timezone.get_current_timezone(),
+        )
+        start_minute = local_start.hour * 60 + local_start.minute
+        services_by_provider = {}
         for reservation_service in reservation.servicios.all():
-            provider_key = str(
-                reservation_service.prestador_idprestador_id
-            )
-            slot_key = f'{provider_key}|{date_key}'
-            occupied_slots.setdefault(slot_key, [])
-            if time_key not in occupied_slots[slot_key]:
-                occupied_slots[slot_key].append(time_key)
+            provider_key = str(reservation_service.prestador_idprestador_id)
+            services_by_provider.setdefault(provider_key, 0)
+            services_by_provider[provider_key] += reservation_service.duracion
+        for provider_key, duration in services_by_provider.items():
+            interval_key = f'{provider_key}|{date_key}'
+            occupied_intervals.setdefault(interval_key, []).append({
+                'start': start_minute,
+                'end': start_minute + duration,
+            })
     return render(request, 'website/home.html', {
         'prestador_user': user_prestador_id,
         'services_page': services_page,
@@ -359,7 +367,7 @@ def home(request):
             'usuario__first_name', 'usuario__last_name', 'pk',
         ),
         'booking_dates': booking_dates,
-        'booking_occupied_slots': occupied_slots,
+        'booking_occupied_intervals': occupied_intervals,
         'booking_client': client_profile,
         'confirmed_booking': confirmed_booking,
         'confirmed_payment': confirmed_payment,
@@ -448,16 +456,43 @@ def reservas(request):
             provider = Prestador.objects.select_for_update().get(
                 pk=service.prestador_idprestador_id,
             )
-            occupied = Reserva.objects.filter(
+            candidate_end = reservation_datetime + timedelta(
+                minutes=service.duracion,
+            )
+            existing_reservations = Reserva.objects.filter(
                 fecha=reservation_date,
-                hora_bloque=reservation_datetime,
                 estado__in=['Pendiente', 'Confirmada', 'Completada'],
                 servicios__prestador_idprestador=provider,
-            ).exists()
+            ).distinct().prefetch_related('servicios')
+            occupied = False
+            for existing in existing_reservations:
+                existing_services = [
+                    existing_service
+                    for existing_service in existing.servicios.all()
+                    if existing_service.prestador_idprestador_id == provider.pk
+                ]
+                existing_duration = sum(
+                    existing_service.duracion
+                    for existing_service in existing_services
+                )
+                existing_start = timezone.localtime(
+                    existing.hora_bloque,
+                    timezone.get_current_timezone(),
+                )
+                existing_end = existing_start + timedelta(
+                    minutes=existing_duration,
+                )
+                if (
+                    reservation_datetime < existing_end
+                    and existing_start < candidate_end
+                ):
+                    occupied = True
+                    break
             if occupied:
                 messages.error(
                     request,
-                    'Ese horario ya fue reservado. Selecciona otro disponible.',
+                    'Ese horario se solapa con otra reserva. '
+                    'Selecciona otro horario.',
                 )
                 return redirect('home')
             reservation = Reserva.objects.create(
