@@ -436,6 +436,10 @@ class AdminDashboardTests(TestCase):
         self.assertContains(response, 'Corte y brushing')
         self.assertContains(response, '$28.000')
         self.assertContains(response, '$23.800')
+        self.assertContains(response, 'Total neto a profesionales')
+        self.assertContains(response, 'Comisión plataforma')
+        self.assertContains(response, 'admin-liquidation-card')
+        self.assertEqual(response.context['liquidation_total_net'], '$23.800')
 
     def test_liquidations_can_be_filtered_by_provider_and_service(self):
         self.client.force_login(self.admin_user)

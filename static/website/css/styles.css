@@ -108,6 +108,27 @@
 .admin-payment-disclaimer{max-width:1050px;margin:13px auto;color:var(--muted);font-size:10px}
 @media(max-width:900px){.admin-dashboard{grid-template-columns:285px minmax(0,1fr)}.admin-sidebar{padding:24px 17px}.admin-main{padding:30px 24px}.admin-provider-heading{flex-direction:column}.admin-provider-facts{gap:12px}}
 @media(max-width:650px){.admin-shell .site-header{min-height:68px;padding:10px 15px;gap:10px}.admin-shell .brand-monogram{width:38px;height:38px}.admin-shell .brand-wordmark{width:115px}.admin-header-label{padding-left:10px;font-size:8px}.admin-header-label strong{font-size:10px}.admin-shell .admin-logout .nav-button{padding:9px;font-size:8px}.admin-close{width:34px;height:34px}.admin-dashboard{grid-template-columns:1fr}.admin-sidebar{padding:18px 15px;border-right:0;border-bottom:1px solid #e5ddda}.admin-section-nav{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:12px 0}.admin-section-nav>a{justify-content:center;flex-direction:column;gap:4px;min-height:73px;padding:8px 4px;text-align:center;font-size:9px}.admin-section-nav>a>b{min-width:20px;height:20px;margin:0}.admin-nav-icon{width:29px;height:29px;font-size:14px}.admin-sidebar-divider{margin:15px 0}.admin-sidebar-title h2{font-size:23px}.admin-request-list{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-main{padding:25px 15px 40px}.admin-provider-heading h1,.admin-section-heading h1,.admin-empty-state h1{font-size:34px}.admin-provider-facts{grid-template-columns:1fr;gap:10px;margin:20px 0}.admin-provider-facts article{min-height:70px}.admin-table{min-width:700px}.provider-shell .dashboard-booking-link,.admin-shell .dashboard-booking-link{display:inline-flex!important;padding:7px 9px!important;font-size:8px!important}}
+.admin-liquidation-dashboard{max-width:1050px;margin:0 auto 18px;padding:28px 30px;border-radius:22px;background:#fff}
+.admin-liquidation-heading{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.admin-liquidation-title h1{margin:8px 0 5px;font:500 clamp(32px,4vw,47px)/1.08 "Playfair Display",serif}
+.admin-liquidation-title p{margin:0;color:var(--muted);font-size:12px}
+.admin-liquidation-total{display:grid;min-width:135px;min-height:74px;align-content:center;gap:8px;border-radius:17px;background:#a5dea8;padding:12px 18px;text-align:center}
+.admin-liquidation-total span,.admin-liquidation-amounts span{color:#7b8b79;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.admin-liquidation-total strong{color:#38232f;font:500 25px "Playfair Display",serif}
+.admin-liquidation-filters{max-width:1050px;margin:0 auto 14px}
+.admin-liquidation-list{display:grid;max-width:1050px;gap:14px;margin:0 auto}
+.admin-liquidation-card{padding:20px;border:1px solid #e5ddda;border-radius:17px;background:#faf8f7}
+.admin-liquidation-card-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding-bottom:18px;border-bottom:1px solid #e5ddda}
+.admin-liquidation-card-heading strong{font-size:13px}
+.admin-liquidation-card-heading p{margin:5px 0 0;color:var(--muted);font-size:11px}
+.admin-liquidation-status{flex:none;border-radius:20px;background:#dff3df;color:#46794b;padding:6px 11px;font-size:8px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.admin-liquidation-amounts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding-top:18px}
+.admin-liquidation-amounts>div{display:grid;min-width:0;gap:8px;align-content:center;min-height:70px;border-radius:13px;background:#fff;padding:13px}
+.admin-liquidation-amounts strong{color:#38232f;font:500 20px "Playfair Display",serif}
+.admin-liquidation-amounts .admin-liquidation-net{background:#a5dea8}
+.admin-liquidation-amounts .admin-liquidation-net span{color:#58795a}
+.admin-liquidation-empty{padding:38px 20px;border:1px solid #e5ddda;border-radius:17px;background:#fff;color:var(--muted);text-align:center}
+@media(max-width:650px){.admin-liquidation-dashboard{padding:22px 18px;border-radius:17px}.admin-liquidation-heading{align-items:flex-start;flex-direction:column}.admin-liquidation-total{width:100%;min-height:65px}.admin-liquidation-card{padding:15px}.admin-liquidation-amounts{grid-template-columns:1fr;gap:9px}.admin-liquidation-amounts>div{min-height:62px}}
 .dashboard-booking-link{border:1px solid #e4dfe0!important;border-radius:22px;padding:10px 14px!important;background:#fff;color:var(--ink)!important;font-size:9px!important;letter-spacing:.5px!important;text-decoration:none}
 .dashboard-booking-link:hover{border-color:var(--rose)!important;color:var(--rose)!important}
 .provider-site-header .main-nav,.provider-shell .main-nav{flex-wrap:nowrap;gap:14px}

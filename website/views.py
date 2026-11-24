@@ -1174,6 +1174,7 @@ def vista_administrador(request):
     liquidation_rows = [
         {
             'liquidation': liquidation,
+            'service': next(iter(liquidation.servicios.all()), None),
             'gross_display': _format_clp(liquidation.monto_bruto_total),
             'commission_display': _format_clp(liquidation.monto_comision_spa),
             'net_display': _format_clp(liquidation.monto_neto_prestador),
@@ -1214,6 +1215,12 @@ def vista_administrador(request):
         'liquidation_total_commission': _format_clp(
             sum(
                 liquidation.monto_comision_spa
+                for liquidation in completed_liquidation_queryset
+            )
+        ),
+        'liquidation_total_net': _format_clp(
+            sum(
+                liquidation.monto_neto_prestador
                 for liquidation in completed_liquidation_queryset
             )
         ),

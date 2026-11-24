@@ -2,7 +2,7 @@
 {% block title %}Ofrecer servicios · Beauty GO{% endblock %}
 {% block content %}
 <style>
-  .provider-application-page { min-height: 75vh; display: grid; place-items: center; padding: 38px 18px; background: #8d8081; }
+  .provider-application-page { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 22px 18px; background: rgba(56, 35, 47, .52); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
   .provider-application-card { width: min(100%, 720px); max-height: calc(100vh - 44px); overflow-y: auto; border-radius: 26px; background: #f8f5f1; color: #38232f; box-shadow: 0 22px 55px rgba(0, 0, 0, .22); }
   .provider-application-heading { padding: 30px 34px 22px; border-bottom: 1px solid #e9e2e1; }
   .provider-application-eyebrow { color: #d60768; font-size: 9px; font-weight: 700; letter-spacing: 1.8px; text-transform: uppercase; }
@@ -23,6 +23,9 @@
   .provider-application-hint { margin: -2px 0 4px; color: #8d8081; font-size: 11px; }
   .provider-application-field .field-error { color: #b00045; font-size: 11px; }
   .provider-application-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 25px; padding-top: 21px; border-top: 1px solid #e9e2e1; }
+  .provider-application-actions .secondary-button { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; border: 1px solid #ded5d8; border-radius: 26px; background: transparent; color: #38232f; padding: 0 24px; font-size: 14px; font-weight: 500; text-decoration: none; transition: background-color .18s ease, border-color .18s ease; }
+  .provider-application-actions .secondary-button:hover { border-color: #c8b9bf; background: #fff; }
+  .provider-application-actions .secondary-button:focus-visible { outline: 2px solid #38232f; outline-offset: 3px; }
   @media (max-width: 560px) {
     .provider-application-page { padding: 14px 10px; }
     .provider-application-card { max-height: calc(100vh - 28px); border-radius: 20px; }

@@ -1,10 +1,49 @@
 {% extends 'website/base.html' %}
 {% block title %}Iniciar sesión · Beauty Go{% endblock %}
 {% block content %}
-<main class="form-page"><div class="form-card">
-  <span class="eyebrow">Bienvenido de vuelta</span><h1>Inicia sesión</h1>
-  <p>Ingresa para administrar tus datos y conectar con profesionales de belleza.</p>
-  <form method="post" class="styled-form">{% csrf_token %}{{ form.as_p }}<button class="primary-button" type="submit">Ingresar</button></form>
-  <p class="form-links">¿Aún no tienes cuenta? <a href="{% url 'registro' %}">Crear una cuenta</a></p>
-</div></main>
+<style>
+  .login-backdrop { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 18px; background: rgba(56, 35, 47, .52); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .login-card { position: relative; width: min(100%, 448px); max-height: calc(100vh - 36px); overflow-y: auto; border-radius: 27px; background: #f8f5f1; color: #38232f; padding: 32px; box-shadow: 0 22px 55px rgba(0, 0, 0, .22); }
+  .login-card::after { position: absolute; top: -19px; right: 3px; z-index: 0; color: #f1d8df; content: "◇"; font: 130px/1 "DM Sans", sans-serif; pointer-events: none; }
+  .login-close { position: absolute; top: 20px; right: 20px; z-index: 1; display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 50%; background: #fff; color: #38232f; font-size: 25px; text-decoration: none; }
+  .login-eyebrow { position: relative; z-index: 1; color: #d60768; font-size: 9px; font-weight: 700; letter-spacing: 1.8px; text-transform: uppercase; }
+  .login-card h1 { position: relative; z-index: 1; max-width: 350px; margin: 14px 0 12px; font: 500 36px/1.22 "Playfair Display", serif; }
+  .login-intro { margin: 0 0 27px; color: #93878b; font-size: 13px; line-height: 1.6; }
+  .login-form p { display: flex; flex-direction: column; gap: 7px; margin: 0 0 16px; }
+  .login-form label { color: #38232f; font-size: 12px; font-weight: 700; }
+  .login-form input { width: 100%; min-height: 43px; border: 1px solid #e9e2e1; border-radius: 12px; background: #fff; color: #38232f; padding: 10px 13px; }
+  .login-form input:focus { border-color: #d60768; outline: 2px solid #d6076833; }
+  .login-form .errorlist { margin: 0; padding: 0; color: #b00045; list-style: none; font-size: 11px; }
+  .login-submit { width: 100%; min-height: 50px; margin-top: 1px; border: 0; border-radius: 27px; background: #38232f; color: #fff; font-size: 14px; font-weight: 600; }
+  .login-links { margin: 20px 0 0; color: #93878b; text-align: center; }
+  .login-links a { color: #d60768; font-weight: 700; }
+  @media (max-width: 520px) {
+    .login-card { padding: 28px 22px; border-radius: 22px; }
+    .login-card h1 { max-width: 300px; font-size: 32px; }
+    .login-close { top: 15px; right: 15px; }
+  }
+</style>
+<main class="login-backdrop">
+  <section class="login-card" role="dialog" aria-modal="true" aria-labelledby="login-title">
+    <a class="login-close" href="{% url 'home' %}" aria-label="Cerrar inicio de sesión">×</a>
+    <span class="login-eyebrow">Acceso Beauty GO</span>
+    <h1 id="login-title">Inicia sesión en tu cuenta.</h1>
+    <p class="login-intro">Usaremos tus credenciales para llevarte automáticamente al espacio que te corresponde.</p>
+    <form method="post" class="login-form">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="login-form-errors">{{ form.non_field_errors }}</div>
+      {% endif %}
+      {% for field in form %}
+        <p>
+          {{ field.label_tag }}
+          {{ field }}
+          {% for error in field.errors %}<span class="errorlist">{{ error }}</span>{% endfor %}
+        </p>
+      {% endfor %}
+      <button class="login-submit" type="submit">Iniciar sesión</button>
+    </form>
+    <p class="login-links">¿Aún no tienes cuenta? <a href="{% url 'registro' %}">Crear una cuenta</a></p>
+  </section>
+</main>
 {% endblock %}

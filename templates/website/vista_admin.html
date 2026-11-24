@@ -226,11 +226,18 @@
       </div>
       <p class="admin-payment-disclaimer">Los pagos pueden registrarse mediante el flujo simulado o manualmente por administración. Beauty Go no procesa cobros bancarios reales.</p>
     {% else %}
-      <section class="admin-section-heading">
-        <span class="admin-sidebar-label">Gestión financiera</span>
-        <h1>Liquidaciones</h1>
-        <p>Montos registrados para profesionales y comisiones de la plataforma.</p>
-        <p><strong>Montos totales:</strong> {{ liquidation_total_commission }} en comisiones</p>
+      <section class="admin-liquidation-dashboard">
+        <header class="admin-liquidation-heading">
+          <div class="admin-liquidation-title">
+            <span class="admin-sidebar-label">Pagos a prestadores</span>
+            <h1>Liquidaciones</h1>
+            <p>Montos de servicios completados y comisiones de la plataforma.</p>
+          </div>
+          <div class="admin-liquidation-total">
+            <span>Total neto a profesionales</span>
+            <strong>{{ liquidation_total_net }}</strong>
+          </div>
+        </header>
       </section>
       <form class="admin-liquidation-filters" method="get" action="{% url 'vista_administrador' %}">
         <input type="hidden" name="section" value="liquidaciones">
@@ -253,32 +260,39 @@
           </div>
         </details>
       </form>
-      <div class="admin-table-wrap">
-        <table class="admin-table">
-          <thead><tr><th>N°</th><th>Profesional</th><th>Servicio</th><th>Monto bruto</th><th>Comisión</th><th>Neto comisión</th><th>Neto profesional</th></tr></thead>
-          <tbody>
-            {% for row in liquidation_rows %}
-              <tr>
-                <td><strong>#{{ row.liquidation.idliquidacion }}</strong></td>
-                {% with service=row.liquidation.servicios.all|first %}
-                  {% if service %}
-                    <td><strong>{{ service.prestador_idprestador.usuario.get_full_name|default:service.prestador_idprestador.usuario.username }}</strong></td>
-                    <td><strong>{{ service.nombre }}</strong></td>
-                  {% else %}
-                    <td><small>Sin profesional asociado</small></td>
-                    <td><small>Sin servicio asociado</small></td>
-                  {% endif %}
-                {% endwith %}
-                <td>{{ row.gross_display }}</td>
-                <td>{{ row.liquidation.porcentaje_comision|floatformat:0 }}%</td>
-                <td><strong>{{ row.commission_display }}</strong></td>
-                <td><strong>{{ row.net_display }}</strong></td>
-              </tr>
-            {% empty %}
-              <tr><td class="admin-table-empty" colspan="7">Todavía no hay liquidaciones registradas para reservas completadas.</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="admin-liquidation-list">
+        {% for row in liquidation_rows %}
+          <article class="admin-liquidation-card">
+            <header class="admin-liquidation-card-heading">
+              <div>
+                {% if row.service %}
+                  <strong>{{ row.service.prestador_idprestador.usuario.get_full_name|default:row.service.prestador_idprestador.usuario.username }}</strong>
+                  <p>{{ row.service.nombre }} · Liquidación #{{ row.liquidation.idliquidacion }}</p>
+                {% else %}
+                  <strong>Profesional no asociado</strong>
+                  <p>Liquidación #{{ row.liquidation.idliquidacion }}</p>
+                {% endif %}
+              </div>
+              <span class="admin-liquidation-status">Generada</span>
+            </header>
+            <div class="admin-liquidation-amounts">
+              <div>
+                <span>Venta bruta</span>
+                <strong>{{ row.gross_display }}</strong>
+              </div>
+              <div>
+                <span>Comisión plataforma · {{ row.liquidation.porcentaje_comision|floatformat:0 }}%</span>
+                <strong>− {{ row.commission_display }}</strong>
+              </div>
+              <div class="admin-liquidation-net">
+                <span>Neto a profesional</span>
+                <strong>{{ row.net_display }}</strong>
+              </div>
+            </div>
+          </article>
+        {% empty %}
+          <div class="admin-liquidation-empty">Todavía no hay liquidaciones registradas para reservas completadas.</div>
+        {% endfor %}
       </div>
       {% if liquidation_page.paginator.num_pages > 1 %}
         <nav class="service-pagination" aria-label="Paginación de liquidaciones">
