@@ -22,7 +22,7 @@
 ###### Sistema de validación para evitar agendamiento que solapen otros
 
 - Implica un/os nuevo@ modúlo@ que bloqueen dos o más horarios según la duración de una reserva.
-- Por ejemplo, Si una reserva con horario a las 18:00 horas dura 1 hora, debe bloquearse el bloque de las 18:30 horas.
+- Por ejemplo, Si una reserva con horario a las 18:00 horas dura 1 hora, debe bloquearse el bloque de las 18:30 horas. ✅
 
 ##### Evaluar si se deben hacer
 
