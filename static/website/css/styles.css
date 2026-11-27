@@ -227,8 +227,22 @@
 .provider-publish-card h2,.provider-content-section h2{margin:7px 0 17px;font:500 29px/1.15 "Playfair Display",serif}
 .provider-service-form{display:grid;gap:14px}
 .provider-form-field{display:grid;min-width:0;gap:7px}
+.provider-form-field[hidden]{display:none!important}
 .provider-form-field>label{color:#493a41;font-size:11px;font-weight:700}
 .provider-form-control{width:100%;min-height:44px;border:1px solid #e4dfe0;border-radius:12px;background:#f8f6f4;color:#493a41;padding:11px 14px;font-size:12px;outline:none}
+.provider-custom-select{position:relative;width:100%;min-width:0}
+.provider-custom-select>select{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important}
+.provider-custom-select-trigger{display:flex;width:100%;min-height:44px;align-items:center;justify-content:space-between;gap:12px;border:1px solid #e4dfe0;border-radius:12px;background:#f8f6f4;color:#493a41;padding:0 14px;text-align:left;font:inherit;font-size:12px;cursor:pointer;transition:border-color .18s ease,box-shadow .18s ease,background .18s ease}
+.provider-custom-select-trigger::after{width:8px;height:8px;flex:none;border-right:1.5px solid #8d8081;border-bottom:1.5px solid #8d8081;content:"";transform:rotate(45deg) translateY(-2px);transition:transform .18s ease}
+.provider-custom-select-trigger[aria-expanded=true]{border-color:var(--rose);background:#fff;box-shadow:0 0 0 3px #d6076816}
+.provider-custom-select-trigger[aria-expanded=true]::after{transform:rotate(225deg) translate(-2px,-1px)}
+.provider-custom-select-trigger:focus-visible{outline:2px solid var(--rose);outline-offset:2px}
+.provider-custom-select-menu{position:absolute;top:calc(100% + 7px);right:0;left:0;z-index:40;display:grid;max-height:240px;overflow-y:auto;padding:6px;border:1px solid #e9e3e1;border-radius:14px;background:#fff;box-shadow:0 12px 30px #38232f1c}
+.provider-custom-select-menu[hidden]{display:none}
+.provider-custom-select-option{width:100%;min-height:38px;border:0;border-radius:9px;background:transparent;color:#493a41;padding:8px 11px;text-align:left;font:inherit;font-size:12px;cursor:pointer;transition:background .15s ease,color .15s ease}
+.provider-custom-select-option:hover,.provider-custom-select-option:focus-visible{outline:0;background:#f8f1f3;color:#b50759}
+.provider-custom-select-option[aria-selected=true]{background:#fae5eb;color:#b50759;font-weight:700}
+.provider-custom-select-option:disabled{color:#aaa0a0;cursor:not-allowed}
 .provider-form-control:focus{border-color:var(--rose);box-shadow:0 0 0 3px #d6076816}
 .provider-form-control::placeholder{color:#a39798}
 .provider-form-field textarea.provider-form-control{min-height:96px;resize:vertical;line-height:1.55}
@@ -246,6 +260,13 @@
 .provider-service-list>header,.provider-content-heading{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:15px}
 .provider-service-list>header h2,.provider-content-heading h2{margin:6px 0 0;font:500 30px "Playfair Display",serif}
 .provider-service-list>header>b,.provider-content-heading>b{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#a5dea8;color:#38593c}
+.provider-service-filters{display:grid;grid-template-columns:minmax(150px,1.3fr) repeat(2,minmax(125px,1fr)) auto;gap:8px;margin:0 0 15px;padding:11px;border:1px solid #e9e3e1;border-radius:15px;background:#f8f5f2}
+.provider-service-filters input,.provider-service-filters select{width:100%;min-width:0;min-height:40px;border:1px solid #e4dfe0;border-radius:10px;background:#fff;color:#493a41;padding:0 12px;font:inherit;font-size:11px}
+.provider-service-filters input::placeholder{color:#a39798}
+.provider-service-filters input:focus,.provider-service-filters select:focus{border-color:var(--rose);outline:2px solid #d6076816}
+.provider-service-filters button{min-height:40px;border:0;border-radius:22px;background:var(--rose);color:#fff;padding:0 17px;font-size:11px;font-weight:700;transition:background .18s ease}
+.provider-service-filters button:hover{background:#bd075d}
+.provider-service-filters button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 .provider-service-card{display:flex;align-items:center;gap:14px;margin-bottom:10px;padding:13px;border:1px solid #e9e3e1;border-radius:16px;background:#fff}
 .provider-service-image{flex:none;width:96px;height:96px;border-radius:12px;object-fit:cover}
 .provider-service-copy{min-width:0;flex:1}
@@ -303,7 +324,8 @@
 .provider-subscription-empty{padding:23px;border:1px dashed #ded5d8;border-radius:14px;color:var(--muted);font-size:11px;text-align:center}
 .provider-shell .admin-header-label{flex:1}
 @media(max-width:850px){.provider-dashboard{margin:25px auto 50px}.provider-services-layout{grid-template-columns:1fr}.provider-section-nav>a{padding:10px;gap:8px}.provider-section-nav>a>b{display:none}.provider-subscription-banner{align-items:flex-start;flex-direction:column}.provider-subscription-action{justify-items:start;width:100%;min-width:0}.provider-subscription-action>p,.provider-subscription-action>small{text-align:left}}
-@media(max-width:650px){.provider-status-banner{align-items:flex-start;flex-direction:column;padding:23px;min-height:0}.provider-status-banner h1{font-size:34px}.provider-section-nav{grid-template-columns:1fr}.provider-section-nav>a{min-height:58px}.provider-section-nav>a>b{display:grid}.provider-panel-card{padding:15px}.provider-publish-card,.provider-content-section{padding:20px}.provider-service-list>header h2,.provider-content-heading h2{font-size:26px}.provider-reservation-card{align-items:flex-start;flex-wrap:wrap}.provider-reservation-actions{width:100%;justify-content:flex-start}.provider-site-header .main-nav,.provider-shell .main-nav{gap:6px}.provider-role-link{padding:9px 12px!important;font-size:8px!important}.provider-logout .nav-button{font-size:8px}.provider-address-link{max-width:150px;padding:9px 11px!important;font-size:10px!important}.provider-form-row{grid-template-columns:1fr}.provider-service-card{gap:9px;padding:9px}.provider-service-image{width:70px;height:70px}.provider-service-price{font-size:13px}.provider-service-copy h3{font-size:12px}.provider-subscription-banner,.provider-subscription-history{padding:21px}.provider-subscription-price strong{font-size:34px}.provider-subscription-history h2{font-size:26px}.provider-subscription-row{flex-wrap:wrap;gap:10px}.provider-subscription-period{flex-basis:100%}.provider-subscription-row-amount{margin-right:auto}.provider-subscription-badge{min-width:100px}}
+@media(max-width:850px){.provider-service-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.provider-service-filters input{grid-column:1/-1}}
+@media(max-width:650px){.provider-status-banner{align-items:flex-start;flex-direction:column;padding:23px;min-height:0}.provider-status-banner h1{font-size:34px}.provider-section-nav{grid-template-columns:1fr}.provider-section-nav>a{min-height:58px}.provider-section-nav>a>b{display:grid}.provider-panel-card{padding:15px}.provider-publish-card,.provider-content-section{padding:20px}.provider-service-list>header h2,.provider-content-heading h2{font-size:26px}.provider-service-filters{grid-template-columns:1fr}.provider-service-filters input{grid-column:auto}.provider-service-filters button{width:100%}.provider-reservation-card{align-items:flex-start;flex-wrap:wrap}.provider-reservation-actions{width:100%;justify-content:flex-start}.provider-site-header .main-nav,.provider-shell .main-nav{gap:6px}.provider-role-link{padding:9px 12px!important;font-size:8px!important}.provider-logout .nav-button{font-size:8px}.provider-address-link{max-width:150px;padding:9px 11px!important;font-size:10px!important}.provider-form-row{grid-template-columns:1fr}.provider-service-card{gap:9px;padding:9px}.provider-service-image{width:70px;height:70px}.provider-service-price{font-size:13px}.provider-service-copy h3{font-size:12px}.provider-subscription-banner,.provider-subscription-history{padding:21px}.provider-subscription-price strong{font-size:34px}.provider-subscription-history h2{font-size:26px}.provider-subscription-row{flex-wrap:wrap;gap:10px}.provider-subscription-period{flex-basis:100%}.provider-subscription-row-amount{margin-right:auto}.provider-subscription-badge{min-width:100px}}
 @media(max-width:520px){.provider-site-header{flex-wrap:wrap}.provider-site-header .main-nav{flex:1 1 100%;justify-content:flex-end}.provider-site-header .main-nav a:first-child,.provider-site-header .main-nav .nav-button{display:inline-flex!important}}
 
 .site-header{position:relative}

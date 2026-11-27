@@ -177,7 +177,11 @@ def _filtered_services(request):
         {
             'id': service.idservicio,
             'provider_id': service.prestador_idprestador_id,
-            'category': service.categoria or service.prestador_idprestador.especialidad.split(' y ')[0],
+            'category': (
+                service.categoria_personalizada
+                or service.categoria
+                or service.prestador_idprestador.especialidad.split(' y ')[0]
+            ),
             'category_keys': _service_category_keys(service),
             'name': service.nombre,
             'description': service.descripcion,
@@ -193,7 +197,9 @@ def _filtered_services(request):
             'rating_value': 5.0,
             'badge': 'Disponible ahora',
             'image': _service_image(
-                service.categoria or service.prestador_idprestador.especialidad,
+                service.categoria_personalizada
+                or service.categoria
+                or service.prestador_idprestador.especialidad,
                 index,
             ),
         }
@@ -251,6 +257,7 @@ def _service_category_keys(service):
     value = unicode_normalize(
         'NFKD',
         f'{service.categoria}'
+        f'{service.categoria_personalizada}'
         f'{service.nombre} {service.descripcion}',
     ).encode('ascii', 'ignore').decode().lower()
     terms = {
@@ -260,10 +267,13 @@ def _service_category_keys(service):
         'cejas': ('ceja',),
         'pestanas': ('pestana', 'lifting'),
     }
-    return [
+    category_keys = [
         category for category, keywords in terms.items()
         if any(keyword in value for keyword in keywords)
     ]
+    if service.categoria == Servicio.CATEGORIAS[-1][0]:
+        category_keys.append('otros')
+    return category_keys
 
 
 def _catalog_category_keys(category):
@@ -274,6 +284,7 @@ def _catalog_category_keys(category):
         'faciales': ['faciales'],
         'cejas': ['cejas'],
         'pestanas': ['pestanas'],
+        'otros': ['otros'],
     }.get(value, [])
 
 
@@ -385,7 +396,9 @@ def detalle_servicio(request, pk):
     return render(request, 'website/detalle_servicio.html', {
         'service': service,
         'provider': provider,
-        'service_image': _service_image(service.categoria),
+        'service_image': _service_image(
+            service.categoria_personalizada or service.categoria,
+        ),
     })
 
 
@@ -907,6 +920,7 @@ def vista_prestador(request):
                 service.nombre,
                 service.descripcion,
                 service.categoria,
+                service.categoria_personalizada,
                 prestador.especialidad,
             )).lower()
         ]
@@ -928,7 +942,10 @@ def vista_prestador(request):
     services = [
         {
             'service': service,
-            'image': _service_image(service.categoria, index),
+            'image': _service_image(
+                service.categoria_personalizada or service.categoria,
+                index,
+            ),
             'price_display': _format_clp(service.precio_base),
         }
         for index, service in enumerate(provider_services_page.object_list)

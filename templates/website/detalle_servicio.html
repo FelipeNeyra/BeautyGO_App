@@ -6,7 +6,7 @@
   <article class="service-detail-card">
     <img class="service-detail-image" src="{{ service_image }}" alt="Imagen de {{ service.nombre }}">
     <div class="service-detail-content">
-      <span class="eyebrow green">{{ service.categoria|default:provider.especialidad }}</span>
+      <span class="eyebrow green">{{ service.categoria_personalizada|default:service.categoria|default:provider.especialidad }}</span>
       <h1>{{ service.nombre }}</h1>
       <p class="service-detail-description">{{ service.descripcion|default:"Servicio de belleza a domicilio." }}</p>
 

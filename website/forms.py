@@ -172,6 +172,7 @@ class RegistroPrestadorForm(forms.ModelForm):
 
 
 class ServicioForm(forms.ModelForm):
+    OTRA_CATEGORIA = 'Otros'
     DURACIONES = (
         (30, '30 min'),
         (45, '45 min'),
@@ -187,6 +188,15 @@ class ServicioForm(forms.ModelForm):
             'required': 'Selecciona una categoría.',
             'invalid_choice': 'Selecciona una categoría válida.',
         },
+    )
+    categoria_personalizada = forms.CharField(
+        max_length=30,
+        required=False,
+        label='¿Qué tipo de servicio vas a publicar?',
+        widget=forms.TextInput(attrs={
+            'class': 'provider-form-control',
+            'placeholder': 'Ej. Maquillaje artístico, depilación',
+        }),
     )
     nombre = forms.CharField(
         max_length=45,
@@ -237,7 +247,29 @@ class ServicioForm(forms.ModelForm):
 
     class Meta:
         model = Servicio
-        fields = ['categoria', 'nombre', 'descripcion', 'duracion', 'precio_base']
+        fields = [
+            'categoria',
+            'categoria_personalizada',
+            'nombre',
+            'descripcion',
+            'duracion',
+            'precio_base',
+        ]
+
+    def clean_categoria_personalizada(self):
+        return self.cleaned_data['categoria_personalizada'].strip()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('categoria') == self.OTRA_CATEGORIA:
+            if not cleaned_data.get('categoria_personalizada'):
+                self.add_error(
+                    'categoria_personalizada',
+                    'Indica qué tipo de servicio vas a publicar.',
+                )
+        else:
+            cleaned_data['categoria_personalizada'] = ''
+        return cleaned_data
 
     def clean_nombre(self):
         nombre = self.cleaned_data['nombre'].strip()

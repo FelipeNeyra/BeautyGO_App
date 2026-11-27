@@ -170,6 +170,11 @@ class Servicio(models.Model):
     descripcion = models.TextField(max_length=500, blank=True, default='')
     duracion = models.IntegerField()
     precio_base = models.IntegerField()
+    categoria_personalizada = models.CharField(
+        max_length=30,
+        blank=True,
+        default='',
+    )
     prestador_idprestador = models.ForeignKey(
         Prestador,
         on_delete=models.CASCADE,

@@ -741,6 +741,45 @@ class ProviderDashboardTests(TestCase):
         self.service.refresh_from_db()
         self.assertEqual(self.service.nombre, 'Corte actualizado')
 
+    def test_provider_can_add_a_custom_detail_for_other_service_categories(self):
+        response = self.client.post(reverse('vista_prestador'), {
+            'action': 'guardar_servicio',
+            'categoria': 'Otros',
+            'categoria_personalizada': 'Maquillaje artístico',
+            'nombre': 'Maquillaje de fantasía',
+            'descripcion': 'Diseño de maquillaje artístico para eventos.',
+            'duracion': '60',
+            'precio_base': '25000',
+        })
+
+        self.assertEqual(response.status_code, 302)
+        service = Servicio.objects.get(nombre='Maquillaje de fantasía')
+        self.assertEqual(service.categoria, 'Otros')
+        self.assertEqual(
+            service.categoria_personalizada,
+            'Maquillaje artístico',
+        )
+
+    def test_other_service_category_requires_a_custom_detail(self):
+        response = self.client.post(reverse('vista_prestador'), {
+            'action': 'guardar_servicio',
+            'categoria': 'Otros',
+            'categoria_personalizada': '',
+            'nombre': 'Maquillaje de fantasía',
+            'descripcion': 'Diseño de maquillaje artístico para eventos.',
+            'duracion': '60',
+            'precio_base': '25000',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            'Indica qué tipo de servicio vas a publicar.',
+        )
+        self.assertFalse(
+            Servicio.objects.filter(nombre='Maquillaje de fantasía').exists()
+        )
+
     def test_provider_can_confirm_and_delete_their_own_service(self):
         response = self.client.get(
             reverse('vista_prestador') + f'?section=servicios&eliminar={self.service.pk}'

@@ -65,6 +65,11 @@
               {{ service_form.categoria }}
               {% for error in service_form.categoria.errors %}<small class="provider-field-error">{{ error }}</small>{% endfor %}
             </div>
+            <div class="provider-form-field" id="custom-service-category-field" hidden>
+              <label for="{{ service_form.categoria_personalizada.id_for_label }}">{{ service_form.categoria_personalizada.label }}</label>
+              {{ service_form.categoria_personalizada }}
+              {% for error in service_form.categoria_personalizada.errors %}<small class="provider-field-error">{{ error }}</small>{% endfor %}
+            </div>
             <div class="provider-form-field">
               <label for="{{ service_form.nombre.id_for_label }}">Nombre del servicio</label>
               {{ service_form.nombre }}
@@ -132,7 +137,7 @@
         {% for item in services %}
           <article class="provider-service-card">
             <img class="provider-service-image" src="{{ item.image }}" alt="">
-            <div class="provider-service-copy"><span>{{ item.service.categoria|default:prestador.especialidad }}</span><h3>{{ item.service.nombre }}</h3><p>{{ item.service.duracion }} min</p></div>
+            <div class="provider-service-copy"><span>{{ item.service.categoria_personalizada|default:item.service.categoria|default:prestador.especialidad }}</span><h3>{{ item.service.nombre }}</h3><p>{{ item.service.duracion }} min</p></div>
             <strong class="provider-service-price">{{ item.price_display }}</strong>
             <a href="{% url 'detalle_servicio' item.service.pk %}">Ver detalle</a>
             <a href="{% url 'vista_prestador' %}?section=servicios&editar={{ item.service.pk }}">Editar</a>
@@ -260,4 +265,161 @@
     </section>
   {% endif %}
 </main>
+<script>
+  (() => {
+    const closeSelect = (selectControl, focusTrigger = false) => {
+      const wrapper = selectControl.closest('.provider-custom-select');
+      if (!wrapper) return;
+      const trigger = wrapper.querySelector('.provider-custom-select-trigger');
+      const menu = wrapper.querySelector('.provider-custom-select-menu');
+      trigger.setAttribute('aria-expanded', 'false');
+      menu.hidden = true;
+      if (focusTrigger) trigger.focus();
+    };
+
+    document.querySelectorAll(
+      '.provider-service-form select.provider-form-control, .provider-service-filters select',
+    ).forEach((selectControl, selectIndex) => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'provider-custom-select';
+      selectControl.parentNode.insertBefore(wrapper, selectControl);
+      wrapper.appendChild(selectControl);
+
+      const fieldName = selectControl.name || `provider-select-${selectIndex}`;
+      const trigger = document.createElement('button');
+      trigger.className = 'provider-custom-select-trigger';
+      trigger.type = 'button';
+      trigger.setAttribute('aria-haspopup', 'listbox');
+      trigger.setAttribute('aria-expanded', 'false');
+      const fieldLabel = selectControl.closest('.provider-form-field')?.querySelector('label');
+      trigger.setAttribute(
+        'aria-label',
+        selectControl.getAttribute('aria-label') || fieldLabel?.textContent.trim() || fieldName,
+      );
+
+      const menu = document.createElement('div');
+      menu.className = 'provider-custom-select-menu';
+      menu.id = `provider-select-menu-${selectIndex}`;
+      menu.setAttribute('role', 'listbox');
+      trigger.setAttribute('aria-controls', menu.id);
+      menu.hidden = true;
+
+      const hiddenInput = document.createElement('input');
+      hiddenInput.type = 'hidden';
+      hiddenInput.name = selectControl.name;
+      hiddenInput.value = selectControl.value;
+      selectControl.disabled = true;
+      selectControl.removeAttribute('required');
+      selectControl.setAttribute('aria-hidden', 'true');
+      selectControl.tabIndex = -1;
+
+      const options = Array.from(selectControl.options).map((option, optionIndex) => {
+        const item = document.createElement('button');
+        item.className = 'provider-custom-select-option';
+        item.type = 'button';
+        item.textContent = option.textContent.trim();
+        item.setAttribute('role', 'option');
+        item.setAttribute('aria-selected', String(option.selected));
+        item.disabled = option.disabled;
+        item.addEventListener('click', () => {
+          selectControl.value = option.value;
+          hiddenInput.value = option.value;
+          trigger.textContent = option.textContent.trim();
+          options.forEach((otherOption, otherIndex) => {
+            otherOption.setAttribute(
+              'aria-selected',
+              String(optionIndex === otherIndex),
+            );
+          });
+          selectControl.dispatchEvent(new Event('change', { bubbles: true }));
+          closeSelect(selectControl, true);
+        });
+        menu.appendChild(item);
+        return item;
+      });
+
+      trigger.textContent = selectControl.selectedOptions[0]?.textContent.trim() || '';
+      trigger.addEventListener('click', () => {
+        const isOpen = trigger.getAttribute('aria-expanded') === 'true';
+        document.querySelectorAll('.provider-custom-select select').forEach(
+          (otherSelect) => closeSelect(otherSelect),
+        );
+        if (!isOpen) {
+          trigger.setAttribute('aria-expanded', 'true');
+          menu.hidden = false;
+        }
+      });
+      trigger.addEventListener('keydown', (event) => {
+        const selectedIndex = options.findIndex(
+          (option) => option.getAttribute('aria-selected') === 'true',
+        );
+        if (event.key === 'Tab') {
+          closeSelect(selectControl);
+          return;
+        }
+        let nextIndex = selectedIndex;
+        if (event.key === 'ArrowDown') nextIndex = Math.min(selectedIndex + 1, options.length - 1);
+        else if (event.key === 'ArrowUp') nextIndex = Math.max(selectedIndex - 1, 0);
+        else if (event.key === 'Home') nextIndex = 0;
+        else if (event.key === 'End') nextIndex = options.length - 1;
+        else if (event.key === 'Escape') {
+          closeSelect(selectControl);
+          return;
+        } else {
+          return;
+        }
+        event.preventDefault();
+        trigger.setAttribute('aria-expanded', 'true');
+        menu.hidden = false;
+        options[nextIndex]?.focus();
+      });
+      menu.addEventListener('keydown', (event) => {
+        const currentIndex = options.indexOf(document.activeElement);
+        let nextIndex = currentIndex;
+        if (event.key === 'ArrowDown') nextIndex = Math.min(currentIndex + 1, options.length - 1);
+        else if (event.key === 'ArrowUp') nextIndex = Math.max(currentIndex - 1, 0);
+        else if (event.key === 'Escape') {
+          event.preventDefault();
+          closeSelect(selectControl, true);
+          return;
+        } else if (event.key === 'Tab') {
+          closeSelect(selectControl);
+          return;
+        } else {
+          return;
+        }
+        event.preventDefault();
+        options[nextIndex]?.focus();
+      });
+
+      wrapper.insertBefore(trigger, selectControl);
+      wrapper.appendChild(menu);
+      wrapper.appendChild(hiddenInput);
+    });
+
+    document.addEventListener('pointerdown', (event) => {
+      document.querySelectorAll('.provider-custom-select select').forEach(
+        (selectControl) => {
+          if (!selectControl.closest('.provider-custom-select').contains(event.target)) {
+            closeSelect(selectControl);
+          }
+        },
+      );
+    });
+
+    const categorySelect = document.getElementById('{{ service_form.categoria.id_for_label }}');
+    const customCategoryField = document.getElementById('custom-service-category-field');
+    const customCategoryInput = document.getElementById('{{ service_form.categoria_personalizada.id_for_label }}');
+    if (!categorySelect || !customCategoryField || !customCategoryInput) return;
+
+    const updateCustomCategoryField = () => {
+      const showCustomCategory = categorySelect.value === '{{ service_form.OTRA_CATEGORIA }}';
+      customCategoryField.hidden = !showCustomCategory;
+      customCategoryInput.required = showCustomCategory;
+    };
+
+    categorySelect.addEventListener('change', updateCustomCategoryField);
+    updateCustomCategoryField();
+  })();
+</script>
 {% endblock %}
